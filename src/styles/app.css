@@ -1,6 +1,8 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
 
-/* Scan Liquid templates for class usage */
+/* Only the theme is a source of truth for class usage. source(none) disables
+   Tailwind's project-wide auto-detection, which otherwise picks up class strings
+   in build scripts and emits utilities the storefront never uses. */
 @source "../../theme/**/*.liquid";
 @source "../../theme/**/*.json";
 
@@ -78,7 +80,7 @@
   /* Small caps label: "01 — SHOP BY AGE" */
   .eyebrow {
     font-family: var(--font-sans);
-    font-size: 0.6875rem;
+    font-size: 0.875rem;
     font-weight: 400;
     letter-spacing: var(--tracking-widest2);
     text-transform: uppercase;
@@ -103,7 +105,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1rem 1.75rem;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     letter-spacing: var(--tracking-widest2);
     text-transform: uppercase;
     transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
@@ -128,7 +130,7 @@
     place-items: center;
     background: var(--color-sand);
     color: color-mix(in oklab, var(--color-plum) 45%, transparent);
-    font-size: 0.625rem;
+    font-size: 0.875rem;
     letter-spacing: var(--tracking-widest2);
     text-transform: uppercase;
   }

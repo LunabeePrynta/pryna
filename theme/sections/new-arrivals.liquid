@@ -60,7 +60,7 @@
                   endif
                 -%}
                 {%- if badge != blank -%}
-                  <span class="absolute top-3 left-3 bg-paper/95 text-plum text-[9px] tracking-widest2 uppercase px-2.5 py-1.5">
+                  <span class="absolute top-3 left-3 bg-paper/95 text-plum text-[14px] tracking-widest2 uppercase px-2.5 py-1.5">
                     {{ badge }}
                   </span>
                 {%- endif -%}
@@ -71,9 +71,9 @@
                   {{ product.title }}
                 </h3>
                 {%- if product.type != blank -%}
-                  <p class="mt-0.5 text-[11px] tracking-wide text-ink/50">{{ product.type }}</p>
+                  <p class="mt-0.5 text-[14px] tracking-wide text-ink/50">{{ product.type }}</p>
                 {%- endif -%}
-                {% render 'price', product: product, class: 'mt-1.5 block text-[13px] text-plum/80' %}
+                {% render 'price', product: product, class: 'mt-1.5 block text-[14px] text-plum/80' %}
               </div>
             </a>
           </article>
@@ -85,7 +85,7 @@
             {% render 'media', label: 'Product', ratio: '3/4', tone: 'sand' %}
             <div class="mt-3.5">
               <h3 class="font-display text-plum/50 text-[21px]">Your product</h3>
-              <p class="mt-1.5 text-[13px] text-plum/40">₹—</p>
+              <p class="mt-1.5 text-[14px] text-plum/40">₹—</p>
             </div>
           </article>
         {%- endfor -%}

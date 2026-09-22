@@ -18,11 +18,11 @@
       {%- for block in section.blocks -%}
         {%- assign list = linklists[block.settings.menu] -%}
         <nav {{ block.shopify_attributes }} aria-label="{{ block.settings.heading }}">
-          <h2 class="text-[10px] tracking-widest2 uppercase text-gold">{{ block.settings.heading }}</h2>
+          <h2 class="text-[14px] tracking-widest2 uppercase text-gold">{{ block.settings.heading }}</h2>
           <ul class="mt-5 space-y-2.5">
             {%- for link in list.links -%}
               <li>
-                <a href="{{ link.url }}" class="link-underline text-[13.5px] font-light text-cream/75 hover:text-cream transition-colors">
+                <a href="{{ link.url }}" class="link-underline text-[14px] font-light text-cream/75 hover:text-cream transition-colors">
                   {{ link.title }}
                 </a>
               </li>
@@ -33,7 +33,7 @@
     </div>
 
     <div class="mt-12 pt-6 border-t border-cream/12 flex flex-wrap items-center justify-between gap-4">
-      <p class="text-[10px] tracking-widest2 uppercase text-cream/55">
+      <p class="text-[14px] tracking-widest2 uppercase text-cream/55">
         &copy; {{ 'now' | date: '%Y' }} {{ shop.name }} &middot; {{ section.settings.city }}
       </p>
 
@@ -45,7 +45,7 @@
         </div>
       {%- endif -%}
 
-      <div class="flex items-center gap-5 text-[10px] tracking-widest2 uppercase text-cream/55">
+      <div class="flex items-center gap-5 text-[14px] tracking-widest2 uppercase text-cream/55">
         {%- if settings.social_instagram_url != blank -%}
           <a href="{{ settings.social_instagram_url }}" class="hover:text-gold transition-colors">Instagram</a>
         {%- endif -%}

@@ -28,7 +28,7 @@
           {%- for link in menu.links -%}
             <a
               href="{{ link.url }}"
-              class="link-underline text-[11px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
+              class="link-underline text-[14px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
             >{{ link.title }}</a>
           {%- endfor -%}
         </nav>
@@ -61,13 +61,13 @@
       <div class="flex items-center justify-end gap-5 md:gap-7">
         <a
           href="{{ routes.search_url }}"
-          class="hidden md:inline link-underline text-[11px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
+          class="hidden md:inline link-underline text-[14px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
         >{{ 'sections.header.search' | t }}</a>
 
         {%- if shop.customer_accounts_enabled -%}
           <a
             href="{{ routes.account_url }}"
-            class="hidden md:inline link-underline text-[11px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
+            class="hidden md:inline link-underline text-[14px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
           >{{ 'sections.header.account' | t }}</a>
         {%- endif -%}
 
@@ -81,7 +81,7 @@
 
         <a
           href="{{ routes.cart_url }}"
-          class="group inline-flex items-center gap-2 text-[11px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
+          class="group inline-flex items-center gap-2 text-[14px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
         >
           <span class="hidden md:inline">{{ 'sections.header.cart' | t }}</span>
           <svg class="md:hidden" width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -111,7 +111,7 @@
         >{{ link.title }}</a>
       {%- endfor -%}
     </nav>
-    <div class="mt-8 flex flex-col gap-3 text-[11px] tracking-widest2 uppercase text-plum/70">
+    <div class="mt-8 flex flex-col gap-3 text-[14px] tracking-widest2 uppercase text-plum/70">
       <a href="{{ routes.search_url }}" data-menu-close>{{ 'sections.header.search' | t }}</a>
       {%- if shop.customer_accounts_enabled -%}
         <a href="{{ routes.account_url }}" data-menu-close>{{ 'sections.header.account' | t }}</a>
