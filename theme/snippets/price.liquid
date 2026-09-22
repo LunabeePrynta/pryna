@@ -16,6 +16,6 @@
     {{ product.price | money }}
   {%- endif -%}
   {%- if on_sale -%}
-    <s class="ml-2 opacity-50">{{ product.compare_at_price | money }}</s>
+    <s class="ml-2">{{ product.compare_at_price | money }}</s>
   {%- endif -%}
 </span>

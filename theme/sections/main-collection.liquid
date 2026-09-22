@@ -3,7 +3,7 @@
     <p class="eyebrow mb-4">{{ collection.products_count }} {% if collection.products_count == 1 %}item{% else %}items{% endif %}</p>
     <h1 class="font-display text-plum text-[40px] md:text-[60px] leading-none">{{ collection.title }}</h1>
     {%- if collection.description != blank -%}
-      <div class="mt-4 max-w-xl text-[15px] font-light leading-relaxed text-ink/70">{{ collection.description }}</div>
+      <div class="mt-4 max-w-xl text-[15px] font-light leading-relaxed text-ink">{{ collection.description }}</div>
     {%- endif -%}
 
     {%- paginate collection.products by 24 -%}
@@ -11,7 +11,7 @@
       {%- for product in collection.products -%}
         {% render 'product-card', product: product %}
       {%- else -%}
-        <p class="col-span-full text-ink/60">No products yet.</p>
+        <p class="col-span-full text-ink">No products yet.</p>
       {%- endfor -%}
     </div>
 

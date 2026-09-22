@@ -8,7 +8,7 @@
         <input
           id="q" type="search" name="q" value="{{ search.terms | escape }}"
           placeholder="{{ 'general.search.placeholder' | t }}"
-          class="flex-1 bg-transparent py-3.5 text-[16px] outline-none placeholder:text-ink/40"
+          class="flex-1 bg-transparent py-3.5 text-[16px] outline-none placeholder:text-ink"
         >
         <button type="submit" class="text-[14px] tracking-widest2 uppercase text-amber py-3.5">Go</button>
       </div>
@@ -26,7 +26,7 @@
             </a>
           {%- endif -%}
         {%- else -%}
-          <p class="col-span-full text-ink/60">Nothing found.</p>
+          <p class="col-span-full text-ink">Nothing found.</p>
         {%- endfor -%}
       </div>
     {%- endif -%}

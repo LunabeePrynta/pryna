@@ -7,10 +7,10 @@
     {%- comment -%} Rendered twice so the -50% keyframe loops seamlessly. {%- endcomment -%}
     {%- for pass in (1..2) -%}
       {%- for item in items -%}
-        <span class="font-display italic text-[22px] md:text-[30px] text-plum/45 whitespace-nowrap">
+        <span class="font-display italic text-[22px] md:text-[30px] text-plum whitespace-nowrap">
           {{ item | strip }}
         </span>
-        <span class="text-amber/60 text-xs">&middot;</span>
+        <span class="text-amber text-xs">&middot;</span>
       {%- endfor -%}
     {%- endfor -%}
   </div>

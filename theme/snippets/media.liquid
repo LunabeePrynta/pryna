@@ -16,11 +16,11 @@
   assign sizes = sizes | default: '(min-width: 768px) 50vw, 100vw'
   case tone
     when 'plum'
-      assign tone_class = 'bg-plum text-cream/45'
+      assign tone_class = 'bg-plum text-cream'
     when 'clay'
-      assign tone_class = 'bg-clay text-plum/45'
+      assign tone_class = 'bg-clay text-plum'
     else
-      assign tone_class = 'bg-sand text-plum/45'
+      assign tone_class = 'bg-sand text-plum'
   endcase
   if eager
     assign loading = 'eager'

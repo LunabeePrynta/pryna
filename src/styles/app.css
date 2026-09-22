@@ -129,7 +129,7 @@
     display: grid;
     place-items: center;
     background: var(--color-sand);
-    color: color-mix(in oklab, var(--color-plum) 45%, transparent);
+    color: var(--color-plum);
     font-size: 0.875rem;
     letter-spacing: var(--tracking-widest2);
     text-transform: uppercase;

@@ -26,7 +26,7 @@
           <div class="space-y-6">
             {%- for option in product.options_with_values -%}
               <div>
-                <p class="text-[14px] tracking-widest2 uppercase text-plum/60 mb-3">{{ option.name }}</p>
+                <p class="text-[14px] tracking-widest2 uppercase text-plum mb-3">{{ option.name }}</p>
                 <div class="flex flex-wrap gap-2">
                   {%- for value in option.values -%}
                     <label class="opt">
@@ -65,7 +65,7 @@
       {%- endform -%}
 
       {%- if product.description != blank -%}
-        <div class="prose-lyra mt-10 text-[15px] font-light leading-relaxed text-ink/75">
+        <div class="prose-lyra mt-10 text-[15px] font-light leading-relaxed text-ink">
           {{ product.description }}
         </div>
       {%- endif -%}
