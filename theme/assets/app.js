@@ -11,22 +11,14 @@
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var hasGSAP = typeof window.gsap !== 'undefined';
 
-  /* ── Header: shrink + hide-on-scroll-down ───────────────────── */
+  /* ── Header: always visible, gains a shadow once the page scrolls ─── */
   function initHeader() {
     var header = document.querySelector('[data-header]');
     if (!header) return;
-    var last = 0;
     var threshold = 24;
 
     function onScroll() {
-      var y = window.scrollY;
-      header.classList.toggle('is-stuck', y > threshold);
-      // Only hide once past the hero, and never while a menu/drawer is open
-      if (!document.body.hasAttribute('data-overlay-open')) {
-        if (y > 320 && y > last) header.classList.add('is-hidden');
-        else header.classList.remove('is-hidden');
-      }
-      last = y;
+      header.classList.toggle('is-stuck', window.scrollY > threshold);
     }
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
