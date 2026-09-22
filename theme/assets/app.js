@@ -114,6 +114,68 @@
       track.addEventListener('scroll', sync, { passive: true });
       window.addEventListener('resize', sync);
       sync();
+
+      /* Drag-to-scroll, mouse only. Touch devices keep the browser's native
+         panning, which is smoother than anything we could synthesise. */
+      var dragging = false;
+      var moved = 0;
+      var suppressClick = false;
+      var startX = 0;
+      var startLeft = 0;
+
+      track.addEventListener('pointerdown', function (e) {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        dragging = true;
+        moved = 0;
+        suppressClick = false;
+        startX = e.clientX;
+        startLeft = track.scrollLeft;
+        track.classList.add('is-dragging');
+        /* Capture once, here. Calling this per-move can throw on a stale
+           pointer id, which would abort the handler before the scroll below. */
+        try { track.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+
+      track.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        e.preventDefault();
+        var dx = e.clientX - startX;
+        moved = Math.abs(dx);
+        track.scrollLeft = startLeft - dx;
+      });
+
+      function endDrag(e) {
+        if (!dragging) return;
+        dragging = false;
+        /* Arm a one-shot click suppressor so the release at the end of a drag
+           does not also open the product it happens to land on. Cleared on the
+           next pointerdown, so an ordinary click is never swallowed. */
+        if (moved > 5) suppressClick = true;
+        track.classList.remove('is-dragging');
+        if (e && e.pointerId != null && track.hasPointerCapture(e.pointerId)) {
+          track.releasePointerCapture(e.pointerId);
+        }
+      }
+      /* No pointerleave listener: setPointerCapture fires boundary events, which
+         would end the drag the instant it starts. Capture guarantees pointerup
+         lands here, and lostpointercapture covers every other exit. */
+      /* Dragging across a card would otherwise start a native HTML drag on the
+         link/image, and the browser cancels our pointer stream to do it. */
+      track.addEventListener('dragstart', function (e) { e.preventDefault(); });
+
+      track.addEventListener('pointerup', endDrag);
+      track.addEventListener('pointercancel', endDrag);
+      track.addEventListener('lostpointercapture', endDrag);
+
+      /* A drag that moved should not also open the product it finished on. */
+      track.addEventListener('click', function (e) {
+        if (!suppressClick) return;
+        suppressClick = false;
+        if (e.target.closest('a')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, true);
     });
   }
 

@@ -36,7 +36,7 @@
   <div class="wrap">
     <div
       data-carousel-track
-      class="no-bar flex gap-4 md:gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-1"
+      class="no-bar lyra-track flex gap-4 md:gap-6 overflow-x-auto snap-x snap-mandatory pb-1"
     >
       {%- if products.size > 0 -%}
         {%- for product in products limit: count -%}
@@ -95,6 +95,27 @@
 </section>
 
 {% stylesheet %}
+  /* Native touch panning. scroll-behavior is deliberately NOT set here: combined
+     with scroll-snap it makes every touchmove restart a smooth snap animation,
+     which reads as the carousel refusing to drag. The arrow buttons pass
+     behavior:'smooth' to scrollBy instead. */
+  .lyra-track {
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  /* Belt and braces with the dragstart handler in app.js. */
+  .lyra-track a,
+  .lyra-track img {
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+  .lyra-track.is-dragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
+    user-select: none;
+  }
+
   .car-btn {
     display: grid;
     place-items: center;
