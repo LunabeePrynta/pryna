@@ -1,6 +1,12 @@
 {
   "sections": {
-    "hero": { "type": "hero", "settings": {} },
+    "hero": {
+      "type": "hero",
+      "settings": {
+        "image_1": "shopify://shop_images/2_3160d332-4d3b-42a9-b7dd-6b7b32630d23.webp",
+        "image_2": "shopify://shop_images/1_9ff9fe67-9223-4832-8cb3-4e868dc7e246.webp"
+      }
+    },
     "marquee": { "type": "marquee", "settings": {} },
     "age": {
       "type": "shop-by-age",
