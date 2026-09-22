@@ -1,0 +1,41 @@
+<section class="py-12 md:py-20">
+  <div class="wrap">
+    <h1 class="font-display text-plum text-[40px] md:text-[56px] leading-none">{{ 'general.search.title' | t }}</h1>
+
+    <form action="{{ routes.search_url }}" method="get" role="search" class="mt-8 max-w-xl">
+      <div class="flex items-center gap-4 border-b border-plum/30 focus-within:border-amber transition-colors">
+        <label for="q" class="sr-only">{{ 'general.search.placeholder' | t }}</label>
+        <input
+          id="q" type="search" name="q" value="{{ search.terms | escape }}"
+          placeholder="{{ 'general.search.placeholder' | t }}"
+          class="flex-1 bg-transparent py-3.5 text-[16px] outline-none placeholder:text-ink/40"
+        >
+        <button type="submit" class="text-[11px] tracking-widest2 uppercase text-amber py-3.5">Go</button>
+      </div>
+    </form>
+
+    {%- if search.performed -%}
+      <p class="eyebrow mt-8">{{ search.results_count }} results</p>
+      <div class="mt-8 grid gap-x-5 gap-y-10 grid-cols-2 lg:grid-cols-4" data-anim="stagger">
+        {%- for item in search.results -%}
+          {%- if item.object_type == 'product' -%}
+            {% render 'product-card', product: item %}
+          {%- else -%}
+            <a href="{{ item.url }}" class="block">
+              <h2 class="font-display text-plum text-[21px] leading-tight">{{ item.title }}</h2>
+            </a>
+          {%- endif -%}
+        {%- else -%}
+          <p class="col-span-full text-ink/60">Nothing found.</p>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+{% stylesheet %}
+  .card-media img { transition: transform 1.1s cubic-bezier(0.22,1,0.36,1); }
+  .group:hover .card-media img { transform: scale(1.045); }
+{% endstylesheet %}
+{% schema %}
+{ "name": "Search", "settings": [] }
+{% endschema %}

@@ -1,0 +1,15 @@
+<section class="py-12 md:py-20">
+  <div class="wrap max-w-3xl">
+    <h1 class="font-display text-plum text-[40px] md:text-[58px] leading-[1.03]">{{ page.title }}</h1>
+    <div class="prose-lyra mt-8 text-[16px] font-light leading-relaxed text-ink/78">{{ page.content }}</div>
+  </div>
+</section>
+{% stylesheet %}
+  .prose-lyra p { margin-block: 1em; }
+  .prose-lyra h2 { font-family: var(--font-serif); font-size: 1.9rem; margin-block: 1.4em 0.5em; color: var(--color-plum); }
+  .prose-lyra ul { list-style: disc; padding-inline-start: 1.25rem; margin-block: 1em; }
+  .prose-lyra a { text-decoration: underline; text-underline-offset: 3px; }
+{% endstylesheet %}
+{% schema %}
+{ "name": "Page", "settings": [] }
+{% endschema %}

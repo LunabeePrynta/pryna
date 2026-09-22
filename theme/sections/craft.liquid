@@ -1,0 +1,72 @@
+{%- liquid
+  assign s = section.settings
+-%}
+
+<section class="py-14 md:py-24">
+  <div class="wrap">
+    <p class="section-label eyebrow mb-8 md:mb-12">{{ s.label }}</p>
+
+    <div class="grid gap-8 lg:grid-cols-3 lg:gap-10 items-start">
+
+      <div class="lg:pr-6" data-anim="fade-up">
+        <h2 class="font-display text-plum text-[34px] md:text-[44px] leading-[1.05]">{{ s.heading }}</h2>
+        <p class="mt-5 text-[15px] font-light leading-relaxed text-ink/70">{{ s.body }}</p>
+      </div>
+
+      <div data-anim="reveal" data-parallax="-5">
+        {% render 'media', image: s.image_1, label: s.image_1_label, ratio: '3/4', tone: 'sand', sizes: '(min-width: 1024px) 33vw, 100vw' %}
+      </div>
+
+      <div class="lg:pt-14">
+        <div data-anim="reveal">
+          {% render 'media', image: s.image_2, label: s.image_2_label, ratio: '4/3', tone: 'clay', sizes: '(min-width: 1024px) 33vw, 100vw' %}
+        </div>
+
+        <dl class="mt-8 divide-y divide-plum/12">
+          {%- for block in section.blocks -%}
+            <div class="flex items-baseline gap-5 py-4" {{ block.shopify_attributes }}>
+              <dt class="font-display text-amber text-[34px] leading-none w-16 shrink-0">{{ block.settings.value }}</dt>
+              <dd class="text-[13px] font-light leading-snug text-ink/65">{{ block.settings.text }}</dd>
+            </div>
+          {%- endfor -%}
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Craft & fabric",
+  "settings": [
+    { "type": "text", "id": "label", "label": "Section label", "default": "05 — Craft & fabric" },
+    { "type": "textarea", "id": "heading", "label": "Heading", "default": "Eleven hands touch every garment" },
+    { "type": "textarea", "id": "body", "label": "Body", "default": "From the loom in Kaithun to the final press, each Lyra piece passes through eleven pairs of hands — weavers, block printers, embroiderers, finishers. We name them on the care label." },
+    { "type": "image_picker", "id": "image_1", "label": "Image 1" },
+    { "type": "text", "id": "image_1_label", "label": "Image 1 placeholder", "default": "Artisan at the loom" },
+    { "type": "image_picker", "id": "image_2", "label": "Image 2" },
+    { "type": "text", "id": "image_2_label", "label": "Image 2 placeholder", "default": "Fabric close-up" }
+  ],
+  "blocks": [
+    {
+      "type": "stat",
+      "name": "Statistic",
+      "settings": [
+        { "type": "text", "id": "value", "label": "Value", "default": "11" },
+        { "type": "text", "id": "text", "label": "Text", "default": "artisans named on every care label" }
+      ]
+    }
+  ],
+  "max_blocks": 5,
+  "presets": [
+    {
+      "name": "Craft & fabric",
+      "blocks": [
+        { "type": "stat", "settings": { "value": "11", "text": "artisans named on every care label" } },
+        { "type": "stat", "settings": { "value": "60s", "text": "count mulmul, triple-washed for softness" } },
+        { "type": "stat", "settings": { "value": "0", "text": "azo dyes, plastic trims or synthetic linings" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

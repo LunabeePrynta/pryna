@@ -1,0 +1,152 @@
+{%- liquid
+  assign menu = linklists[section.settings.menu]
+-%}
+
+<header
+  data-header
+  class="lyra-header sticky top-0 z-50 bg-paper/95 backdrop-blur-md border-b border-plum/10"
+>
+  <div class="wrap">
+    <div class="grid grid-cols-[auto_1fr_auto] md:grid-cols-3 items-center gap-4 h-[62px] md:h-[76px]">
+
+      {%- comment -%} Left: desktop nav / mobile menu button {%- endcomment -%}
+      <div class="flex items-center">
+        <button
+          type="button"
+          data-menu-toggle
+          aria-expanded="false"
+          aria-controls="lyra-menu"
+          aria-label="{{ 'general.accessibility.menu' | t }}"
+          class="md:hidden -ml-1 p-2 text-plum"
+        >
+          <svg width="20" height="14" viewBox="0 0 20 14" fill="none" aria-hidden="true">
+            <path d="M0 1h20M0 7h20M0 13h20" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+        </button>
+
+        <nav class="hidden md:flex items-center gap-8" aria-label="Primary">
+          {%- for link in menu.links -%}
+            <a
+              href="{{ link.url }}"
+              class="link-underline text-[11px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
+            >{{ link.title }}</a>
+          {%- endfor -%}
+        </nav>
+      </div>
+
+      {%- comment -%} Centre: wordmark {%- endcomment -%}
+      <div class="flex justify-center">
+        <a href="{{ routes.root_url }}" class="block text-center leading-none" aria-label="{{ shop.name }}">
+          {%- if settings.logo != blank -%}
+            <img
+              src="{{ settings.logo | image_url: width: 400 }}"
+              alt="{{ shop.name | escape }}"
+              width="{{ settings.logo.width }}"
+              height="{{ settings.logo.height }}"
+              style="width: {{ settings.logo_width }}px;"
+              class="h-auto"
+            >
+          {%- else -%}
+            <span class="font-display block text-[26px] md:text-[30px] text-plum leading-none">
+              {{ settings.logo_word }}
+            </span>
+            <span class="block text-[9px] md:text-[10px] tracking-mega uppercase text-amber mt-0.5">
+              {{ settings.logo_sub }}
+            </span>
+          {%- endif -%}
+        </a>
+      </div>
+
+      {%- comment -%} Right: utilities {%- endcomment -%}
+      <div class="flex items-center justify-end gap-5 md:gap-7">
+        <a
+          href="{{ routes.search_url }}"
+          class="hidden md:inline link-underline text-[11px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
+        >{{ 'sections.header.search' | t }}</a>
+
+        {%- if shop.customer_accounts_enabled -%}
+          <a
+            href="{{ routes.account_url }}"
+            class="hidden md:inline link-underline text-[11px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
+          >{{ 'sections.header.account' | t }}</a>
+        {%- endif -%}
+
+        {%- comment -%} Mobile icon-only search {%- endcomment -%}
+        <a href="{{ routes.search_url }}" class="md:hidden p-1 text-plum" aria-label="{{ 'sections.header.search' | t }}">
+          <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M12.5 12.5 17 17" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+        </a>
+
+        <a
+          href="{{ routes.cart_url }}"
+          class="group inline-flex items-center gap-2 text-[11px] tracking-widest2 uppercase text-plum hover:text-amber transition-colors"
+        >
+          <span class="hidden md:inline">{{ 'sections.header.cart' | t }}</span>
+          <svg class="md:hidden" width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M2.5 5h13l-1 11h-11z" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M6 5V3.6a3 3 0 0 1 6 0V5" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+          <span
+            class="grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-plum text-cream text-[10px] tracking-normal group-hover:bg-amber transition-colors"
+          >{{ cart.item_count }}</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {%- comment -%} Mobile menu panel {%- endcomment -%}
+  <div
+    id="lyra-menu"
+    data-menu-panel
+    class="lyra-menu md:hidden fixed inset-x-0 top-[62px] bottom-0 z-40 bg-paper px-5 pt-8 overflow-y-auto"
+  >
+    <nav class="flex flex-col gap-1" aria-label="Mobile">
+      {%- for link in menu.links -%}
+        <a
+          href="{{ link.url }}"
+          data-menu-close
+          class="font-display text-[34px] text-plum py-2 border-b border-plum/10"
+        >{{ link.title }}</a>
+      {%- endfor -%}
+    </nav>
+    <div class="mt-8 flex flex-col gap-3 text-[11px] tracking-widest2 uppercase text-plum/70">
+      <a href="{{ routes.search_url }}" data-menu-close>{{ 'sections.header.search' | t }}</a>
+      {%- if shop.customer_accounts_enabled -%}
+        <a href="{{ routes.account_url }}" data-menu-close>{{ 'sections.header.account' | t }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</header>
+
+{% stylesheet %}
+  .lyra-header {
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+  }
+  .lyra-header.is-stuck {
+    box-shadow: 0 1px 24px rgb(74 36 41 / 0.07);
+  }
+  .lyra-header.is-hidden {
+    transform: translateY(-100%);
+  }
+  /* Mobile panel slides rather than pops */
+  .lyra-menu {
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.45s;
+  }
+  .lyra-menu.is-open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Header",
+  "settings": [
+    { "type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu" }
+  ]
+}
+{% endschema %}

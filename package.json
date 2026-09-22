@@ -1,0 +1,18 @@
+{
+  "name": "lyra-kids-theme",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lyra Kids — luxury childrenswear Shopify theme (Tailwind + GSAP)",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/styles/app.css -o ./theme/assets/app.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles/app.css -o ./theme/assets/app.css --watch",
+    "vendor": "node scripts/vendor.mjs",
+    "build": "npm run build:css && npm run vendor",
+    "zip": "node scripts/zip.mjs"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.0.0",
+    "tailwindcss": "^4.0.0",
+    "gsap": "^3.13.0"
+  }
+}

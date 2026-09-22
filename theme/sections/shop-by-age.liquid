@@ -1,0 +1,70 @@
+<section class="py-14 md:py-24">
+  <div class="wrap">
+    <p class="section-label eyebrow mb-8 md:mb-12">{{ section.settings.label }}</p>
+
+    <div class="grid gap-5 md:gap-6 md:grid-cols-2" data-anim="stagger">
+      {%- for block in section.blocks -%}
+        <a
+          href="{{ block.settings.url | default: routes.all_products_collection_url }}"
+          class="group relative block overflow-hidden"
+          {{ block.shopify_attributes }}
+        >
+          <div class="age-media">
+            {% render 'media',
+              image: block.settings.image,
+              label: block.settings.placeholder,
+              ratio: '4/3',
+              tone: 'clay',
+              sizes: '(min-width: 768px) 50vw, 100vw'
+            %}
+          </div>
+
+          {%- comment -%} Scrim so the caption stays readable on any photo {%- endcomment -%}
+          <div class="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-plum/85 via-plum/35 to-transparent"></div>
+
+          <div class="absolute inset-x-0 bottom-0 p-6 md:p-8">
+            <h3 class="font-display text-cream text-[30px] md:text-[38px] leading-none">{{ block.settings.title }}</h3>
+            <p class="mt-2 text-[10px] md:text-[11px] tracking-widest2 uppercase text-cream/75">{{ block.settings.meta }}</p>
+          </div>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  .age-media img { transition: transform 1.1s cubic-bezier(0.22, 1, 0.36, 1); }
+  .group:hover .age-media img { transform: scale(1.045); }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Shop by age",
+  "settings": [
+    { "type": "text", "id": "label", "label": "Section label", "default": "01 — Shop by age" }
+  ],
+  "blocks": [
+    {
+      "type": "age",
+      "name": "Age group",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "placeholder", "label": "Placeholder caption", "default": "Newborn imagery" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Newborn" },
+        { "type": "text", "id": "meta", "label": "Meta", "default": "0–12 months · 24 styles" },
+        { "type": "url", "id": "url", "label": "Link" }
+      ]
+    }
+  ],
+  "max_blocks": 4,
+  "presets": [
+    {
+      "name": "Shop by age",
+      "blocks": [
+        { "type": "age", "settings": { "title": "Newborn", "meta": "0–12 months · 24 styles", "placeholder": "Newborn imagery" } },
+        { "type": "age", "settings": { "title": "Toddler", "meta": "1–4 years · 38 styles", "placeholder": "Toddler imagery" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

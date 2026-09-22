@@ -1,0 +1,21 @@
+<div class="bg-plum text-cream">
+  <div class="wrap">
+    <p class="py-2.5 text-center text-[10px] md:text-[11px] tracking-widest2 uppercase text-gold">
+      {{ section.settings.text }}
+    </p>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Announcement bar",
+  "settings": [
+    {
+      "type": "text",
+      "id": "text",
+      "label": "Message",
+      "default": "Complimentary shipping across India · Gift wrapping on every order"
+    }
+  ]
+}
+{% endschema %}

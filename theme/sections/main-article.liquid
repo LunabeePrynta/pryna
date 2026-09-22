@@ -1,0 +1,19 @@
+<article class="py-12 md:py-20">
+  <div class="wrap max-w-3xl">
+    <p class="eyebrow">{{ article.published_at | date: '%d %B %Y' }}</p>
+    <h1 class="font-display text-plum text-[40px] md:text-[58px] leading-[1.03] mt-3">{{ article.title }}</h1>
+    {%- if article.image -%}
+      <div class="mt-10" data-anim="reveal">
+        {% render 'media', image: article.image, ratio: '16/9', tone: 'sand', eager: true, sizes: '100vw' %}
+      </div>
+    {%- endif -%}
+    <div class="prose-lyra mt-10 text-[16px] font-light leading-relaxed text-ink/78">{{ article.content }}</div>
+  </div>
+</article>
+{% stylesheet %}
+  .prose-lyra p { margin-block: 1em; }
+  .prose-lyra h2 { font-family: var(--font-serif); font-size: 1.9rem; margin-block: 1.4em 0.5em; color: var(--color-plum); }
+{% endstylesheet %}
+{% schema %}
+{ "name": "Article", "settings": [] }
+{% endschema %}

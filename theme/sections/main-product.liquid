@@ -1,0 +1,94 @@
+<section class="py-10 md:py-16">
+  <div class="wrap grid gap-10 lg:grid-cols-2 lg:gap-16 items-start">
+
+    <div class="grid gap-3">
+      {%- if product.media.size > 0 -%}
+        {%- for media in product.media limit: 6 -%}
+          <div data-anim="reveal">
+            {% render 'media', image: media.preview_image, ratio: '3/4', tone: 'sand', eager: forloop.first, sizes: '(min-width: 1024px) 50vw, 100vw' %}
+          </div>
+        {%- endfor -%}
+      {%- else -%}
+        {% render 'media', label: product.title, ratio: '3/4', tone: 'sand', eager: true %}
+      {%- endif -%}
+    </div>
+
+    <div class="lg:sticky lg:top-28">
+      {%- if product.type != blank -%}
+        <p class="eyebrow mb-4">{{ product.type }}</p>
+      {%- endif -%}
+
+      <h1 class="font-display text-plum text-[38px] md:text-[52px] leading-[1.03]">{{ product.title }}</h1>
+      {% render 'price', product: product, class: 'mt-4 block text-[18px] text-plum' %}
+
+      {%- form 'product', product, class: 'mt-8' -%}
+        {%- unless product.has_only_default_variant -%}
+          <div class="space-y-6">
+            {%- for option in product.options_with_values -%}
+              <div>
+                <p class="text-[10px] tracking-widest2 uppercase text-plum/60 mb-3">{{ option.name }}</p>
+                <div class="flex flex-wrap gap-2">
+                  {%- for value in option.values -%}
+                    <label class="opt">
+                      <input
+                        type="radio"
+                        name="option-{{ option.position }}"
+                        value="{{ value | escape }}"
+                        {% if option.selected_value == value %}checked{% endif %}
+                        class="sr-only"
+                      >
+                      <span>{{ value }}</span>
+                    </label>
+                  {%- endfor -%}
+                </div>
+              </div>
+            {%- endfor -%}
+          </div>
+        {%- endunless -%}
+
+        <select name="id" class="sr-only" aria-hidden="true" tabindex="-1">
+          {%- for variant in product.variants -%}
+            <option value="{{ variant.id }}" {% if variant == product.selected_or_first_available_variant %}selected{% endif %}>
+              {{ variant.title }}
+            </option>
+          {%- endfor -%}
+        </select>
+
+        <button
+          type="submit"
+          name="add"
+          class="btn btn-solid w-full justify-center mt-8"
+          {% unless product.available %}disabled{% endunless %}
+        >
+          {%- if product.available -%}{{ 'products.product.add_to_cart' | t }}{%- else -%}{{ 'products.product.sold_out' | t }}{%- endif -%}
+        </button>
+      {%- endform -%}
+
+      {%- if product.description != blank -%}
+        <div class="prose-lyra mt-10 text-[15px] font-light leading-relaxed text-ink/75">
+          {{ product.description }}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  .opt span {
+    display: inline-block;
+    padding: 0.6rem 1.05rem;
+    border: 1px solid rgb(74 36 41 / 0.25);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .opt input:checked + span { background: var(--color-plum); border-color: var(--color-plum); color: var(--color-cream); }
+  .opt input:focus-visible + span { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+  .prose-lyra p { margin-block: 0.75em; }
+  .prose-lyra ul { list-style: disc; padding-inline-start: 1.25rem; }
+{% endstylesheet %}
+
+{% schema %}
+{ "name": "Product", "settings": [] }
+{% endschema %}

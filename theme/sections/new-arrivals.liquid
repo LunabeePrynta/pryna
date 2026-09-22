@@ -1,0 +1,129 @@
+{%- liquid
+  assign s = section.settings
+  assign coll = collections[s.collection]
+  assign products = coll.products
+  assign count = s.max_products | default: 8
+-%}
+
+<section class="pb-14 md:pb-24" data-carousel>
+  <div class="wrap">
+    <p class="section-label eyebrow mb-6 md:mb-8">{{ s.label }}</p>
+
+    <div class="flex items-end justify-between gap-6 mb-7 md:mb-10">
+      <h2 class="font-display text-plum text-[34px] md:text-[52px] leading-none" data-anim="fade-up">
+        {{ s.heading }}
+      </h2>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button type="button" data-carousel-prev class="car-btn" aria-label="{{ 'general.accessibility.previous' | t }}">
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+            <path d="M6 1 1 6l5 5M1 6h15" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+        </button>
+        <button type="button" data-carousel-next class="car-btn" aria-label="{{ 'general.accessibility.next' | t }}">
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+            <path d="M10 1l5 5-5 5M15 6H0" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {%- comment -%}
+    The track starts at the container gutter but bleeds to the right edge, so
+    the next card is always partly visible — reads as editorial, not clipped.
+  {%- endcomment -%}
+  <div class="wrap">
+    <div
+      data-carousel-track
+      class="no-bar flex gap-4 md:gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-1"
+    >
+      {%- if products.size > 0 -%}
+        {%- for product in products limit: count -%}
+          <article class="snap-start shrink-0 w-[72vw] sm:w-[46vw] lg:w-[calc((100%-3rem)/3.35)]">
+            <a href="{{ product.url }}" class="group block">
+              <div class="relative overflow-hidden card-media">
+                {% render 'media',
+                  image: product.featured_image,
+                  label: product.title,
+                  ratio: '3/4',
+                  tone: 'sand',
+                  sizes: '(min-width: 1024px) 30vw, 72vw'
+                %}
+
+                {%- liquid
+                  assign badge = ''
+                  if product.available == false
+                    assign badge = 'Sold out'
+                  elsif product.created_at > s.new_since
+                    assign badge = 'New'
+                  endif
+                -%}
+                {%- if badge != blank -%}
+                  <span class="absolute top-3 left-3 bg-paper/95 text-plum text-[9px] tracking-widest2 uppercase px-2.5 py-1.5">
+                    {{ badge }}
+                  </span>
+                {%- endif -%}
+              </div>
+
+              <div class="mt-3.5">
+                <h3 class="font-display text-plum text-[21px] md:text-[23px] leading-tight group-hover:text-amber transition-colors">
+                  {{ product.title }}
+                </h3>
+                {%- if product.type != blank -%}
+                  <p class="mt-0.5 text-[11px] tracking-wide text-ink/50">{{ product.type }}</p>
+                {%- endif -%}
+                {% render 'price', product: product, class: 'mt-1.5 block text-[13px] text-plum/80' %}
+              </div>
+            </a>
+          </article>
+        {%- endfor -%}
+      {%- else -%}
+        {%- comment -%} Empty state: keep the layout legible before products exist {%- endcomment -%}
+        {%- for i in (1..4) -%}
+          <article class="snap-start shrink-0 w-[72vw] sm:w-[46vw] lg:w-[calc((100%-3rem)/3.35)]">
+            {% render 'media', label: 'Product', ratio: '3/4', tone: 'sand' %}
+            <div class="mt-3.5">
+              <h3 class="font-display text-plum/50 text-[21px]">Your product</h3>
+              <p class="mt-1.5 text-[13px] text-plum/40">₹—</p>
+            </div>
+          </article>
+        {%- endfor -%}
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  .car-btn {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgb(74 36 41 / 0.2);
+    color: var(--color-plum);
+    transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .car-btn:hover:not(:disabled) {
+    background: var(--color-plum);
+    border-color: var(--color-plum);
+    color: var(--color-cream);
+  }
+  .car-btn:disabled { opacity: 0.28; cursor: default; }
+  .card-media img { transition: transform 1.1s cubic-bezier(0.22, 1, 0.36, 1); }
+  .group:hover .card-media img { transform: scale(1.045); }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "New arrivals",
+  "settings": [
+    { "type": "text", "id": "label", "label": "Section label", "default": "03 — Just arrived" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "New this week" },
+    { "type": "collection", "id": "collection", "label": "Collection" },
+    { "type": "range", "id": "max_products", "label": "Products to show", "min": 4, "max": 16, "step": 1, "default": 10 },
+    { "type": "text", "id": "new_since", "label": "Mark as new if created after", "info": "Format: 2026-01-01", "default": "2026-01-01" }
+  ],
+  "presets": [{ "name": "New arrivals" }]
+}
+{% endschema %}

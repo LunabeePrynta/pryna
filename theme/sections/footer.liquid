@@ -1,0 +1,94 @@
+<footer class="bg-plum text-cream border-t border-cream/10">
+  <div class="wrap py-14 md:py-16">
+
+    <div class="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)] md:gap-10">
+
+      <div class="max-w-xs">
+        <a href="{{ routes.root_url }}" class="inline-block leading-none">
+          {%- if settings.logo != blank -%}
+            <img src="{{ settings.logo | image_url: width: 300 }}" alt="{{ shop.name | escape }}" style="width: {{ settings.logo_width }}px;" class="h-auto">
+          {%- else -%}
+            <span class="font-display block text-[30px] text-cream leading-none">{{ settings.logo_word }}</span>
+            <span class="block text-[10px] tracking-mega uppercase text-amber mt-1">{{ settings.logo_sub }}</span>
+          {%- endif -%}
+        </a>
+        <p class="mt-5 text-[14px] font-light leading-relaxed text-cream/65">{{ section.settings.tagline }}</p>
+      </div>
+
+      {%- for block in section.blocks -%}
+        {%- assign list = linklists[block.settings.menu] -%}
+        <nav {{ block.shopify_attributes }} aria-label="{{ block.settings.heading }}">
+          <h2 class="text-[10px] tracking-widest2 uppercase text-gold">{{ block.settings.heading }}</h2>
+          <ul class="mt-5 space-y-2.5">
+            {%- for link in list.links -%}
+              <li>
+                <a href="{{ link.url }}" class="link-underline text-[13.5px] font-light text-cream/75 hover:text-cream transition-colors">
+                  {{ link.title }}
+                </a>
+              </li>
+            {%- endfor -%}
+          </ul>
+        </nav>
+      {%- endfor -%}
+    </div>
+
+    <div class="mt-12 pt-6 border-t border-cream/12 flex flex-wrap items-center justify-between gap-4">
+      <p class="text-[10px] tracking-widest2 uppercase text-cream/55">
+        &copy; {{ 'now' | date: '%Y' }} {{ shop.name }} &middot; {{ section.settings.city }}
+      </p>
+
+      {%- if section.settings.show_payment_icons and shop.enabled_payment_types.size > 0 -%}
+        <div class="flex flex-wrap items-center gap-2">
+          {%- for type in shop.enabled_payment_types -%}
+            <span class="pay-icon">{{ type | payment_type_svg_tag }}</span>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      <div class="flex items-center gap-5 text-[10px] tracking-widest2 uppercase text-cream/55">
+        {%- if settings.social_instagram_url != blank -%}
+          <a href="{{ settings.social_instagram_url }}" class="hover:text-gold transition-colors">Instagram</a>
+        {%- endif -%}
+        {%- if settings.contact_email != blank -%}
+          <a href="mailto:{{ settings.contact_email }}" class="hover:text-gold transition-colors">{{ settings.contact_email }}</a>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</footer>
+
+{% stylesheet %}
+  .pay-icon svg { height: 22px; width: auto; border-radius: 3px; background: #fff; }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Footer",
+  "settings": [
+    { "type": "textarea", "id": "tagline", "label": "Tagline", "default": "Luxury childrenswear, made in India for the first four years." },
+    { "type": "text", "id": "city", "label": "City", "default": "Bengaluru" },
+    { "type": "checkbox", "id": "show_payment_icons", "label": "Show payment icons", "default": true }
+  ],
+  "blocks": [
+    {
+      "type": "menu",
+      "name": "Menu column",
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading", "default": "Shop" },
+        { "type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu" }
+      ]
+    }
+  ],
+  "max_blocks": 4,
+  "presets": [
+    {
+      "name": "Footer",
+      "blocks": [
+        { "type": "menu", "settings": { "heading": "Shop" } },
+        { "type": "menu", "settings": { "heading": "Care" } },
+        { "type": "menu", "settings": { "heading": "House" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

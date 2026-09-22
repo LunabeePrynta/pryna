@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}" dir="{{ request.locale.direction | default: 'ltr' }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="{{ settings.color_plum }}">
+    <link rel="canonical" href="{{ canonical_url }}">
+
+    {%- if settings.favicon != blank -%}
+      <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 48, height: 48 }}">
+    {%- endif -%}
+
+    <title>{{ page_title }}{% if current_tags %} &ndash; {{ current_tags | join: ', ' }}{% endif %}{% unless page_title contains shop.name %} &middot; {{ shop.name }}{% endunless %}</title>
+    {%- if page_description -%}<meta name="description" content="{{ page_description | escape }}">{%- endif -%}
+
+    {%- comment -%} Brand faces. Preconnect first so the text paints without a flash. {%- endcomment -%}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap"
+    >
+
+    <link rel="stylesheet" href="{{ 'app.css' | asset_url }}">
+
+    {%- comment -%}
+      Merchant colour settings override the compiled Tailwind tokens, so the
+      palette stays editable in the theme editor without a rebuild.
+    {%- endcomment -%}
+    <style>
+      :root {
+        --color-paper: {{ settings.color_paper }};
+        --color-ink: {{ settings.color_ink }};
+        --color-plum: {{ settings.color_plum }};
+        --color-amber: {{ settings.color_amber }};
+        --color-gold: {{ settings.color_gold }};
+        --color-cream: {{ settings.color_cream }};
+        --color-sand: {{ settings.color_sand }};
+        --color-clay: {{ settings.color_clay }};
+        --display-scale: {{ settings.display_scale | default: 100 | divided_by: 100.0 }};
+      }
+    </style>
+
+    {{ content_for_header }}
+  </head>
+
+  <body class="bg-paper text-ink antialiased">
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-plum focus:text-cream focus:px-5 focus:py-3 focus:text-xs focus:tracking-widest2 focus:uppercase"
+    >
+      {{ 'general.accessibility.skip_to_content' | t }}
+    </a>
+
+    {% sections 'header-group' %}
+
+    <main id="main" role="main">
+      {{ content_for_layout }}
+    </main>
+
+    {% sections 'footer-group' %}
+
+    <script src="{{ 'gsap.min.js' | asset_url }}" defer></script>
+    <script src="{{ 'scroll-trigger.min.js' | asset_url }}" defer></script>
+    <script src="{{ 'app.js' | asset_url }}" defer></script>
+  </body>
+</html>

@@ -1,0 +1,52 @@
+<section class="bg-plum text-cream py-16 md:py-24">
+  <div class="wrap">
+    <div class="grid gap-8 lg:grid-cols-2 lg:gap-16 lg:items-center" data-anim="fade-up">
+      <div>
+        <h2 class="font-display text-cream text-[34px] md:text-[48px] leading-[1.05]">{{ section.settings.heading }}</h2>
+        <p class="mt-4 max-w-md text-[15px] font-light leading-relaxed text-cream/70">{{ section.settings.body }}</p>
+      </div>
+
+      <div>
+        {%- form 'customer', class: 'w-full' -%}
+          <input type="hidden" name="contact[tags]" value="newsletter">
+          <div class="flex items-center gap-4 border-b border-cream/35 focus-within:border-gold transition-colors">
+            <label for="lyra-newsletter" class="sr-only">{{ 'general.newsletter.email' | t }}</label>
+            <input
+              id="lyra-newsletter"
+              type="email"
+              name="contact[email]"
+              required
+              placeholder="{{ 'general.newsletter.email' | t }}"
+              autocomplete="email"
+              class="flex-1 bg-transparent py-4 text-[15px] text-cream placeholder:text-cream/45 outline-none"
+            >
+            <button
+              type="submit"
+              class="shrink-0 text-[11px] tracking-widest2 uppercase text-gold hover:text-cream transition-colors py-4"
+            >
+              {{ 'general.newsletter.submit' | t }}
+            </button>
+          </div>
+
+          {%- if form.posted_successfully? -%}
+            <p class="mt-3 text-[12px] text-gold">{{ 'general.newsletter.success' | t }}</p>
+          {%- endif -%}
+          {%- if form.errors -%}
+            <p class="mt-3 text-[12px] text-gold">{{ form.errors.messages['email'] }}</p>
+          {%- endif -%}
+        {%- endform -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Newsletter",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "First look, first dibs" },
+    { "type": "textarea", "id": "body", "label": "Body", "default": "Small batches sell out. Join the list for early access and a note from the atelier each month." }
+  ],
+  "presets": [{ "name": "Newsletter" }]
+}
+{% endschema %}

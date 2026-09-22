@@ -1,0 +1,27 @@
+{
+  "current": {
+    "logo_word": "Lyra",
+    "logo_sub": "Kids",
+    "logo_width": 120,
+    "color_paper": "#FAF5EC",
+    "color_ink": "#2E1A1D",
+    "color_plum": "#4A2429",
+    "color_amber": "#C97B2C",
+    "color_gold": "#E7B24A",
+    "color_cream": "#FDF3CD",
+    "color_sand": "#EFE7DA",
+    "color_clay": "#E7DCCB",
+    "display_scale": 100,
+    "social_instagram": "@lyrakids",
+    "contact_email": "hello@lyrakids.in",
+    "contact_phone": "+91 98765 43210"
+  },
+  "presets": {
+    "Atelier": {
+      "color_paper": "#FAF5EC",
+      "color_ink": "#2E1A1D",
+      "color_plum": "#4A2429",
+      "color_amber": "#C97B2C"
+    }
+  }
+}

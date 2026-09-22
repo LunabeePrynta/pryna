@@ -1,0 +1,78 @@
+{
+  "sections": {
+    "hero": { "type": "hero", "settings": {} },
+    "marquee": { "type": "marquee", "settings": {} },
+    "age": {
+      "type": "shop-by-age",
+      "blocks": {
+        "newborn": { "type": "age", "settings": { "title": "Newborn", "meta": "0–12 months · 24 styles", "placeholder": "Newborn imagery" } },
+        "toddler": { "type": "age", "settings": { "title": "Toddler", "meta": "1–4 years · 38 styles", "placeholder": "Toddler imagery" } }
+      },
+      "block_order": ["newborn", "toddler"],
+      "settings": {}
+    },
+    "wardrobe": {
+      "type": "wardrobe",
+      "blocks": {
+        "b1": { "type": "category", "settings": { "title": "Bodysuits", "count": "14" } },
+        "b2": { "type": "category", "settings": { "title": "Dresses", "count": "22" } },
+        "b3": { "type": "category", "settings": { "title": "Co-ord sets", "count": "18" } },
+        "b4": { "type": "category", "settings": { "title": "Sleepwear", "count": "11" } },
+        "b5": { "type": "category", "settings": { "title": "Swaddles", "count": "9" } }
+      },
+      "block_order": ["b1", "b2", "b3", "b4", "b5"],
+      "settings": {}
+    },
+    "arrivals": { "type": "new-arrivals", "settings": {} },
+    "featured": {
+      "type": "featured-collection",
+      "blocks": {
+        "p1": { "type": "point", "settings": { "text": "Breathable 60-count mulmul, triple-washed" } },
+        "p2": { "type": "point", "settings": { "text": "Flat seams and covered snaps for new skin" } },
+        "p3": { "type": "point", "settings": { "text": "Sized to grow: 0–12m and 1–4y" } }
+      },
+      "block_order": ["p1", "p2", "p3"],
+      "settings": {}
+    },
+    "craft": {
+      "type": "craft",
+      "blocks": {
+        "s1": { "type": "stat", "settings": { "value": "11", "text": "artisans named on every care label" } },
+        "s2": { "type": "stat", "settings": { "value": "60s", "text": "count mulmul, triple-washed for softness" } },
+        "s3": { "type": "stat", "settings": { "value": "0", "text": "azo dyes, plastic trims or synthetic linings" } }
+      },
+      "block_order": ["s1", "s2", "s3"],
+      "settings": {}
+    },
+    "press": {
+      "type": "press",
+      "blocks": {
+        "q1": { "type": "quote", "settings": { "quote": "The rare children's label that treats a bodysuit like couture.", "source": "Vogue India" } },
+        "q2": { "type": "quote", "settings": { "quote": "Heirloom quality without the heirloom fussiness.", "source": "Elle Decor" } },
+        "q3": { "type": "quote", "settings": { "quote": "Every mother we know has a Lyra swaddle in the hospital bag.", "source": "Mother & Baby" } }
+      },
+      "block_order": ["q1", "q2", "q3"],
+      "settings": {}
+    },
+    "testimonials": {
+      "type": "testimonials",
+      "blocks": {
+        "r1": { "type": "review", "settings": { "rating": 5, "quote": "Bought the frill set for my daughter's naming ceremony. The fabric is impossibly soft and it has survived nine washes looking new.", "author": "Aditi R. · Mumbai" } },
+        "r2": { "type": "review", "settings": { "rating": 5, "quote": "Shipped to London in four days, wrapped in muslin. It felt like opening a gift someone thought about.", "author": "Priya N. · London" } },
+        "r3": { "type": "review", "settings": { "rating": 5, "quote": "My grandson lives in the sleep bag. Sizing runs generous, which is a blessing at this age.", "author": "Meera S. · Chennai" } }
+      },
+      "block_order": ["r1", "r2", "r3"],
+      "settings": {}
+    },
+    "instagram": {
+      "type": "instagram",
+      "blocks": {
+        "i1": { "type": "post" }, "i2": { "type": "post" }, "i3": { "type": "post" },
+        "i4": { "type": "post" }, "i5": { "type": "post" }, "i6": { "type": "post" }
+      },
+      "block_order": ["i1", "i2", "i3", "i4", "i5", "i6"],
+      "settings": {}
+    }
+  },
+  "order": ["hero", "marquee", "age", "wardrobe", "arrivals", "featured", "craft", "press", "testimonials", "instagram"]
+}

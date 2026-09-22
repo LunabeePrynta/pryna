@@ -1,0 +1,176 @@
+@import "tailwindcss";
+
+/* Scan Liquid templates for class usage */
+@source "../../theme/**/*.liquid";
+@source "../../theme/**/*.json";
+
+/* ───────────────────────────────────────────────
+   Lyra Kids — design tokens
+   ─────────────────────────────────────────────── */
+@theme {
+  --color-paper: #FAF5EC;
+  --color-ink: #2E1A1D;
+  --color-plum: #4A2429;
+  --color-plum-deep: #3A1B20;
+  --color-amber: #C97B2C;
+  --color-gold: #E7B24A;
+  --color-cream: #FDF3CD;
+  --color-sand: #EFE7DA;
+  --color-clay: #E7DCCB;
+
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Jost", system-ui, sans-serif;
+
+  --tracking-widest2: 0.24em;
+  --tracking-mega: 0.42em;
+
+  --container-site: 1440px;
+}
+
+/* ───────────────────────────────────────────────
+   Base
+   ─────────────────────────────────────────────── */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-weight: 400;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-serif);
+    font-weight: 300;
+    color: var(--color-plum);
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: var(--color-amber);
+    color: var(--color-cream);
+  }
+
+  /* Keyboard focus only — never a ring on mouse click */
+  :focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 3px;
+  }
+}
+
+/* ───────────────────────────────────────────────
+   Components
+   ─────────────────────────────────────────────── */
+@layer components {
+  .wrap {
+    width: 100%;
+    max-width: var(--container-site);
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 768px) { .wrap { padding-inline: 2rem; } }
+
+  /* Small caps label: "01 — SHOP BY AGE" */
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 400;
+    letter-spacing: var(--tracking-widest2);
+    text-transform: uppercase;
+    color: var(--color-amber);
+  }
+
+  /* Eyebrow followed by a hairline rule */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+  .section-label::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: color-mix(in oklab, var(--color-plum) 18%, transparent);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.75rem;
+    font-size: 0.75rem;
+    letter-spacing: var(--tracking-widest2);
+    text-transform: uppercase;
+    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .btn-solid {
+    background: var(--color-plum);
+    color: var(--color-cream);
+  }
+  .btn-solid:hover { background: var(--color-amber); }
+  .btn-ghost {
+    border: 1px solid color-mix(in oklab, var(--color-cream) 45%, transparent);
+    color: var(--color-cream);
+  }
+  .btn-ghost:hover {
+    background: var(--color-cream);
+    color: var(--color-plum);
+  }
+
+  /* Placeholder used where a merchant has not set an image yet */
+  .ph {
+    display: grid;
+    place-items: center;
+    background: var(--color-sand);
+    color: color-mix(in oklab, var(--color-plum) 45%, transparent);
+    font-size: 0.625rem;
+    letter-spacing: var(--tracking-widest2);
+    text-transform: uppercase;
+  }
+
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-repeat: no-repeat;
+    background-position: left 100%;
+    transition: background-size 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .link-underline:hover { background-size: 100% 1px; }
+
+  /* Hide scrollbar on drag/scroll carousels */
+  .no-bar { scrollbar-width: none; -ms-overflow-style: none; }
+  .no-bar::-webkit-scrollbar { display: none; }
+}
+
+/* ───────────────────────────────────────────────
+   Motion — pre-animation states.
+   .gsap-ready is set by app.js once GSAP takes over, so the page is
+   never left invisible if JS fails or the user prefers reduced motion.
+   ─────────────────────────────────────────────── */
+@layer utilities {
+  .gsap-ready [data-anim="fade-up"],
+  .gsap-ready [data-anim="fade"],
+  .gsap-ready [data-anim="reveal"] > * {
+    will-change: transform, opacity;
+  }
+
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: lyra-marquee 42s linear infinite;
+  }
+  @keyframes lyra-marquee {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-50%, 0, 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+}

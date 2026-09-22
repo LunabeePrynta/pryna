@@ -1,0 +1,21 @@
+{%- comment -%}
+  Money output with sale handling.
+  @param {product} product
+  @param {string} [class]
+{%- enddoc -%}
+{%- liquid
+  assign on_sale = false
+  if product.compare_at_price > product.price
+    assign on_sale = true
+  endif
+-%}
+<span class="{{ class }}">
+  {%- if product.price_varies -%}
+    {{ 'products.product.from' | t }} {{ product.price_min | money }}
+  {%- else -%}
+    {{ product.price | money }}
+  {%- endif -%}
+  {%- if on_sale -%}
+    <s class="ml-2 opacity-50">{{ product.compare_at_price | money }}</s>
+  {%- endif -%}
+</span>

@@ -1,0 +1,55 @@
+<section class="py-10 md:py-16">
+  <div class="wrap">
+    <h1 class="font-display text-plum text-[40px] md:text-[56px] leading-none">{{ 'cart.general.title' | t }}</h1>
+
+    {%- if cart.item_count == 0 -%}
+      <p class="mt-6 text-ink/65">{{ 'cart.general.empty' | t }}</p>
+      <a href="{{ routes.all_products_collection_url }}" class="btn btn-solid mt-8">{{ 'cart.general.continue' | t }}</a>
+    {%- else -%}
+      <form action="{{ routes.cart_url }}" method="post" class="mt-10">
+        <ul class="divide-y divide-plum/12 border-y border-plum/12">
+          {%- for item in cart.items -%}
+            <li class="flex gap-5 py-6">
+              <a href="{{ item.url }}" class="w-24 shrink-0">
+                {% render 'media', image: item.image, label: item.product.title, ratio: '3/4', tone: 'sand', sizes: '96px' %}
+              </a>
+              <div class="flex-1 min-w-0">
+                <a href="{{ item.url }}" class="font-display text-plum text-[21px] leading-tight hover:text-amber transition-colors">{{ item.product.title }}</a>
+                {%- unless item.variant.title contains 'Default' -%}
+                  <p class="mt-1 text-[11px] tracking-wide text-ink/55">{{ item.variant.title }}</p>
+                {%- endunless -%}
+                <div class="mt-3 flex items-center gap-4">
+                  <label class="sr-only" for="qty-{{ item.index }}">{{ 'products.product.quantity' | t }}</label>
+                  <input
+                    id="qty-{{ item.index }}"
+                    type="number"
+                    name="updates[]"
+                    value="{{ item.quantity }}"
+                    min="0"
+                    class="w-16 border border-plum/25 bg-transparent px-2 py-1.5 text-[13px]"
+                  >
+                  <a href="{{ item.url_to_remove }}" class="link-underline text-[11px] tracking-widest2 uppercase text-ink/55">Remove</a>
+                </div>
+              </div>
+              <p class="text-[14px] text-plum shrink-0">{{ item.final_line_price | money }}</p>
+            </li>
+          {%- endfor -%}
+        </ul>
+
+        <div class="mt-8 flex flex-wrap items-center justify-between gap-6">
+          <p class="text-[11px] tracking-widest2 uppercase text-ink/55">
+            {{ 'cart.general.subtotal' | t }} &middot; <span class="text-plum">{{ cart.total_price | money }}</span>
+          </p>
+          <div class="flex gap-3">
+            <button type="submit" name="update" class="btn border border-plum/25 text-plum hover:bg-plum hover:text-cream">Update</button>
+            <button type="submit" name="checkout" class="btn btn-solid">{{ 'cart.general.checkout' | t }}</button>
+          </div>
+        </div>
+      </form>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{ "name": "Cart", "settings": [] }
+{% endschema %}

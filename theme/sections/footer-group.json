@@ -1,0 +1,18 @@
+{
+  "type": "footer",
+  "name": "Footer",
+  "sections": {
+    "newsletter": { "type": "newsletter", "settings": {} },
+    "footer": {
+      "type": "footer",
+      "blocks": {
+        "shop": { "type": "menu", "settings": { "heading": "Shop", "menu": "main-menu" } },
+        "care": { "type": "menu", "settings": { "heading": "Care", "menu": "footer" } },
+        "house": { "type": "menu", "settings": { "heading": "House", "menu": "footer" } }
+      },
+      "block_order": ["shop", "care", "house"],
+      "settings": {}
+    }
+  },
+  "order": ["newsletter", "footer"]
+}

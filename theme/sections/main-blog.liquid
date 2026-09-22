@@ -1,0 +1,33 @@
+<section class="py-12 md:py-20">
+  <div class="wrap">
+    <h1 class="font-display text-plum text-[40px] md:text-[58px] leading-none">{{ blog.title }}</h1>
+    {%- paginate blog.articles by 12 -%}
+      <div class="mt-12 grid gap-x-6 gap-y-12 md:grid-cols-3" data-anim="stagger">
+        {%- for article in blog.articles -%}
+          <a href="{{ article.url }}" class="group block">
+            <div class="card-media overflow-hidden">
+              {% render 'media', image: article.image, label: article.title, ratio: '4/3', tone: 'sand', sizes: '(min-width: 768px) 33vw, 100vw' %}
+            </div>
+            <p class="eyebrow mt-4">{{ article.published_at | date: '%d %B %Y' }}</p>
+            <h2 class="font-display text-plum text-[24px] leading-tight mt-1.5 group-hover:text-amber transition-colors">{{ article.title }}</h2>
+          </a>
+        {%- else -%}
+          <p class="text-ink/60">No posts yet.</p>
+        {%- endfor -%}
+      </div>
+      {%- if paginate.pages > 1 -%}
+        <nav class="mt-14 flex justify-center gap-4 text-[11px] tracking-widest2 uppercase">
+          {%- if paginate.previous -%}<a href="{{ paginate.previous.url }}" class="link-underline">Prev</a>{%- endif -%}
+          {%- if paginate.next -%}<a href="{{ paginate.next.url }}" class="link-underline">Next</a>{%- endif -%}
+        </nav>
+      {%- endif -%}
+    {%- endpaginate -%}
+  </div>
+</section>
+{% stylesheet %}
+  .card-media img { transition: transform 1.1s cubic-bezier(0.22,1,0.36,1); }
+  .group:hover .card-media img { transform: scale(1.045); }
+{% endstylesheet %}
+{% schema %}
+{ "name": "Blog", "settings": [] }
+{% endschema %}

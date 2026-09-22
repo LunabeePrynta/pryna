@@ -1,0 +1,63 @@
+<section class="pb-14 md:pb-20">
+  <div class="wrap">
+    <div class="flex items-end justify-between gap-6 mb-8 md:mb-10">
+      <p class="eyebrow">{{ section.settings.label }}</p>
+      <a
+        href="{{ settings.social_instagram_url | default: '#' }}"
+        class="link-underline font-display text-plum text-[24px] md:text-[30px] leading-none hover:text-amber transition-colors"
+      >{{ settings.social_instagram }}</a>
+    </div>
+
+    <div class="grid grid-cols-3 lg:grid-cols-6 gap-2.5 md:gap-3" data-anim="stagger">
+      {%- for block in section.blocks -%}
+        <a
+          href="{{ block.settings.url | default: settings.social_instagram_url | default: '#' }}"
+          class="group block overflow-hidden ig-tile"
+          {{ block.shopify_attributes }}
+        >
+          {% render 'media',
+            image: block.settings.image,
+            label: 'Post',
+            ratio: '1/1',
+            tone: 'clay',
+            sizes: '(min-width: 1024px) 16vw, 33vw'
+          %}
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  .ig-tile img { transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease; }
+  .ig-tile:hover img { transform: scale(1.07); opacity: 0.9; }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Instagram",
+  "settings": [
+    { "type": "text", "id": "label", "label": "Section label", "default": "08 — Follow along" }
+  ],
+  "blocks": [
+    {
+      "type": "post",
+      "name": "Post",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "url", "id": "url", "label": "Link" }
+      ]
+    }
+  ],
+  "max_blocks": 12,
+  "presets": [
+    {
+      "name": "Instagram",
+      "blocks": [
+        { "type": "post" }, { "type": "post" }, { "type": "post" },
+        { "type": "post" }, { "type": "post" }, { "type": "post" }
+      ]
+    }
+  ]
+}
+{% endschema %}

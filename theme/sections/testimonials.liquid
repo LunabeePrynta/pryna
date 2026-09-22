@@ -1,0 +1,52 @@
+<section class="py-14 md:py-24">
+  <div class="wrap">
+    <p class="section-label eyebrow mb-10 md:mb-14">{{ section.settings.label }}</p>
+
+    <div class="grid gap-10 md:grid-cols-3 md:gap-12" data-anim="stagger">
+      {%- for block in section.blocks -%}
+        <figure class="flex flex-col" {{ block.shopify_attributes }}>
+          <div class="text-amber text-[13px] tracking-[0.2em]" aria-label="{{ block.settings.rating }} out of 5">
+            {%- for i in (1..block.settings.rating) -%}&#9733;{%- endfor -%}
+          </div>
+          <blockquote class="mt-4 text-[15px] font-light leading-relaxed text-ink/75">
+            {{ block.settings.quote }}
+          </blockquote>
+          <figcaption class="mt-5 text-[10px] tracking-widest2 uppercase text-plum/55">
+            {{ block.settings.author }}
+          </figcaption>
+        </figure>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Testimonials",
+  "settings": [
+    { "type": "text", "id": "label", "label": "Section label", "default": "07 — From our families" }
+  ],
+  "blocks": [
+    {
+      "type": "review",
+      "name": "Review",
+      "settings": [
+        { "type": "range", "id": "rating", "label": "Rating", "min": 1, "max": 5, "step": 1, "default": 5 },
+        { "type": "textarea", "id": "quote", "label": "Quote", "default": "The fabric is impossibly soft and it has survived nine washes looking new." },
+        { "type": "text", "id": "author", "label": "Author", "default": "Aditi R. · Mumbai" }
+      ]
+    }
+  ],
+  "max_blocks": 9,
+  "presets": [
+    {
+      "name": "Testimonials",
+      "blocks": [
+        { "type": "review", "settings": { "quote": "Bought the frill set for my daughter's naming ceremony. The fabric is impossibly soft and it has survived nine washes looking new.", "author": "Aditi R. · Mumbai" } },
+        { "type": "review", "settings": { "quote": "Shipped to London in four days, wrapped in muslin. It felt like opening a gift someone thought about.", "author": "Priya N. · London" } },
+        { "type": "review", "settings": { "quote": "My grandson lives in the sleep bag. Sizing runs generous, which is a blessing at this age.", "author": "Meera S. · Chennai" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

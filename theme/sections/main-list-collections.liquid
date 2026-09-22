@@ -1,0 +1,22 @@
+<section class="py-12 md:py-20">
+  <div class="wrap">
+    <h1 class="font-display text-plum text-[40px] md:text-[58px] leading-none">Collections</h1>
+    <div class="mt-12 grid gap-x-5 gap-y-10 grid-cols-2 lg:grid-cols-4" data-anim="stagger">
+      {%- for collection in collections -%}
+        <a href="{{ collection.url }}" class="group block">
+          <div class="card-media overflow-hidden">
+            {% render 'media', image: collection.image, label: collection.title, ratio: '4/5', tone: 'sand', sizes: '(min-width: 1024px) 25vw, 50vw' %}
+          </div>
+          <h2 class="font-display text-plum text-[21px] mt-3 group-hover:text-amber transition-colors">{{ collection.title }}</h2>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{% stylesheet %}
+  .card-media img { transition: transform 1.1s cubic-bezier(0.22,1,0.36,1); }
+  .group:hover .card-media img { transform: scale(1.045); }
+{% endstylesheet %}
+{% schema %}
+{ "name": "Collections list", "settings": [] }
+{% endschema %}

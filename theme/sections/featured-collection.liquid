@@ -1,0 +1,81 @@
+{%- liquid
+  assign s = section.settings
+-%}
+
+<section class="bg-plum text-cream">
+  <div class="grid lg:grid-cols-2 items-stretch">
+
+    {%- comment -%} Full-bleed image half {%- endcomment -%}
+    <div class="relative min-h-[60vw] lg:min-h-[76vh]">
+      {% render 'media',
+        image: s.image,
+        label: s.image_label,
+        tone: 'plum',
+        class: 'absolute inset-0 h-full w-full',
+        sizes: '(min-width: 1024px) 50vw, 100vw'
+      %}
+    </div>
+
+    {%- comment -%} Copy half {%- endcomment -%}
+    <div class="flex items-center px-6 py-14 md:px-14 lg:px-20 lg:py-24">
+      <div class="max-w-xl" data-anim="fade-up">
+        <p class="eyebrow mb-6 text-gold">{{ s.label }}</p>
+
+        <h2 class="font-display text-cream text-[38px] md:text-[56px] leading-[1.02]">{{ s.heading }}</h2>
+
+        <p class="mt-6 text-[15.5px] font-light leading-relaxed text-cream/75">{{ s.body }}</p>
+
+        <ul class="mt-8 space-y-3">
+          {%- for block in section.blocks -%}
+            <li class="flex gap-3 text-[13.5px] font-light text-cream/80" {{ block.shopify_attributes }}>
+              <span class="text-gold shrink-0" aria-hidden="true">&mdash;</span>
+              <span>{{ block.settings.text }}</span>
+            </li>
+          {%- endfor -%}
+        </ul>
+
+        {%- if s.button_label != blank -%}
+          <a href="{{ s.button_url | default: routes.all_products_collection_url }}" class="btn btn-ghost mt-10">
+            {{ s.button_label }}
+            <span aria-hidden="true">&rarr;</span>
+          </a>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Featured collection",
+  "settings": [
+    { "type": "text", "id": "label", "label": "Section label", "default": "04 — Featured collection" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "The Monsoon Edit" },
+    { "type": "textarea", "id": "body", "label": "Body", "default": "Fourteen pieces in rain-washed khadi voile and mulmul, cut loose for humid afternoons. Dyed in small batches with madder root and indigo, so no two sets are quite alike." },
+    { "type": "image_picker", "id": "image", "label": "Image" },
+    { "type": "text", "id": "image_label", "label": "Placeholder caption", "default": "Collection image — full bleed" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Explore the edit" },
+    { "type": "url", "id": "button_url", "label": "Button link" }
+  ],
+  "blocks": [
+    {
+      "type": "point",
+      "name": "Detail line",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Text", "default": "Breathable 60-count mulmul, triple-washed" }
+      ]
+    }
+  ],
+  "max_blocks": 6,
+  "presets": [
+    {
+      "name": "Featured collection",
+      "blocks": [
+        { "type": "point", "settings": { "text": "Breathable 60-count mulmul, triple-washed" } },
+        { "type": "point", "settings": { "text": "Flat seams and covered snaps for new skin" } },
+        { "type": "point", "settings": { "text": "Sized to grow: 0–12m and 1–4y" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

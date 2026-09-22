@@ -1,0 +1,33 @@
+{
+  "general": {
+    "accessibility": {
+      "skip_to_content": "Skip to content",
+      "menu": "Menu",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "search": { "title": "Search", "placeholder": "Search the atelier" },
+    "newsletter": { "email": "Email address", "submit": "Join", "success": "Thank you — you are on the list." },
+    "404": { "title": "Page not found", "subtext": "The page you were looking for has moved or no longer exists.", "link": "Return home" }
+  },
+  "products": {
+    "product": {
+      "add_to_cart": "Add to bag",
+      "sold_out": "Sold out",
+      "unavailable": "Unavailable",
+      "from": "From",
+      "quantity": "Quantity"
+    }
+  },
+  "cart": {
+    "general": { "title": "Your bag", "empty": "Your bag is empty", "subtotal": "Subtotal", "checkout": "Checkout", "continue": "Continue shopping" }
+  },
+  "customer": {
+    "account": { "title": "Account" },
+    "login": { "title": "Sign in" }
+  },
+  "sections": {
+    "header": { "cart": "Bag", "account": "Account", "search": "Search" }
+  }
+}

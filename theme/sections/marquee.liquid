@@ -1,0 +1,33 @@
+{%- liquid
+  assign items = section.settings.items | split: ','
+-%}
+
+<section class="py-8 md:py-10 border-y border-plum/10 overflow-hidden" aria-hidden="true">
+  <div class="marquee-track items-center gap-10 md:gap-16">
+    {%- comment -%} Rendered twice so the -50% keyframe loops seamlessly. {%- endcomment -%}
+    {%- for pass in (1..2) -%}
+      {%- for item in items -%}
+        <span class="font-display italic text-[22px] md:text-[30px] text-plum/45 whitespace-nowrap">
+          {{ item | strip }}
+        </span>
+        <span class="text-amber/60 text-xs">&middot;</span>
+      {%- endfor -%}
+    {%- endfor -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Marquee",
+  "settings": [
+    {
+      "type": "textarea",
+      "id": "items",
+      "label": "Phrases",
+      "info": "Separate with commas.",
+      "default": "OEKO-TEX certified cotton, Hand-finished in Jaipur, Sizes 0–4 years, Wrapped in cotton muslin"
+    }
+  ],
+  "presets": [{ "name": "Marquee" }]
+}
+{% endschema %}
