@@ -1,7 +1,12 @@
 {%- comment -%}
   @param {product} product
   @param {string} [sizes]
-{%- enddoc -%}
+{%- endcomment -%}
+
+{%- liquid
+  assign card_sizes = sizes | default: '(min-width: 1024px) 25vw, 50vw'
+-%}
+
 <article>
   <a href="{{ product.url }}" class="group block">
     <div class="relative overflow-hidden card-media">
@@ -10,7 +15,7 @@
         label: product.title,
         ratio: '3/4',
         tone: 'sand',
-        sizes: sizes | default: '(min-width: 1024px) 25vw, 50vw'
+        sizes: card_sizes
       %}
       {%- unless product.available -%}
         <span class="absolute top-3 left-3 bg-paper/95 text-plum text-[9px] tracking-widest2 uppercase px-2.5 py-1.5">
