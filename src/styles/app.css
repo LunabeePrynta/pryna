@@ -6,6 +6,11 @@
 @source "../../theme/**/*.liquid";
 @source "../../theme/**/*.json";
 
+/* Shopify's Liquid objects read as Tailwind candidates: `filter.v.availability`
+   and friends in the collection template make the scanner emit a `.filter`
+   utility the markup never uses. Block the ones that only ever arrive this way. */
+@source not inline("filter");
+
 /* ───────────────────────────────────────────────
    Lyra Kids — design tokens
    ─────────────────────────────────────────────── */

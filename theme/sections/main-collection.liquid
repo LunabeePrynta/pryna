@@ -1,35 +1,336 @@
+{%- comment -%}
+  Collection page: filter rail on the left, product grid on the right.
+
+  Sold-out products are never shown. The form carries a hidden
+  filter.v.availability=1 so Shopify excludes them server-side once any facet
+  is used, and the render loop skips anything unavailable so a bare
+  /collections/x URL behaves the same way.
+{%- endcomment -%}
+
+{%- liquid
+  assign s = section.settings
+  assign per_page = s.per_page | default: 24
+-%}
+
 <section class="py-10 md:py-16">
   <div class="wrap">
-    <p class="eyebrow mb-4">{{ collection.products_count }} {% if collection.products_count == 1 %}item{% else %}items{% endif %}</p>
-    <h1 class="font-display text-plum text-[40px] md:text-[60px] leading-none">{{ collection.title }}</h1>
-    {%- if collection.description != blank -%}
-      <div class="mt-4 max-w-xl text-[15px] font-light leading-relaxed text-ink">{{ collection.description }}</div>
-    {%- endif -%}
 
-    {%- paginate collection.products by 24 -%}
-    <div class="mt-10 md:mt-14 grid gap-x-5 gap-y-10 grid-cols-2 lg:grid-cols-4" data-anim="stagger">
-      {%- for product in collection.products -%}
-        {% render 'product-card', product: product %}
-      {%- else -%}
-        <p class="col-span-full text-ink">No products yet.</p>
-      {%- endfor -%}
+    <header class="coll-head">
+      <h1 class="font-display text-plum text-[40px] md:text-[60px] leading-none">{{ collection.title }}</h1>
+      {%- if collection.description != blank -%}
+        <div class="mt-4 max-w-xl text-[15px] font-light leading-relaxed text-ink">{{ collection.description }}</div>
+      {%- endif -%}
+    </header>
+
+    {%- paginate collection.products by per_page -%}
+    <div class="coll">
+
+      {%- comment -%} ── Filter rail ── {%- endcomment -%}
+      <aside class="coll__rail" id="coll-facets" data-facet-panel>
+        <form method="get" action="{{ collection.url }}" data-facet-form>
+          {%- comment -%}
+            Availability is deliberately not offered as a facet — the store only
+            ever shows what it can ship, so it is pinned on instead.
+          {%- endcomment -%}
+          <input type="hidden" name="filter.v.availability" value="1">
+          {%- if s.show_sort -%}
+            <input type="hidden" name="sort_by" value="{{ collection.sort_by | default: collection.default_sort_by }}" data-sort-mirror>
+          {%- endif -%}
+
+          <div class="rail__top">
+            <span class="rail__title">
+              <svg width="17" height="15" viewBox="0 0 17 15" fill="none" aria-hidden="true">
+                <path d="M1 3h10M14 3h2M1 11h2M6 11h10M12 1v4M4 9v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+              Filter by
+            </span>
+            <button type="button" class="rail__close" data-facet-close aria-label="Close filters">&times;</button>
+          </div>
+
+          {%- if collection.filters != empty -%}
+            {%- assign any_active = false -%}
+            {%- for f in collection.filters -%}
+              {%- if f.active_values.size > 0 or f.min_value.value or f.max_value.value -%}
+                {%- assign any_active = true -%}
+              {%- endif -%}
+            {%- endfor -%}
+
+            {%- if any_active -%}
+              <a href="{{ collection.url }}" class="rail__clear">
+                <svg width="13" height="14" viewBox="0 0 13 14" fill="none" aria-hidden="true">
+                  <path d="M1 3h11M5 1h3M2.5 3l.7 9.2h6.6L10.5 3M5.2 5.6v4.2M7.8 5.6v4.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+                Clear all
+              </a>
+            {%- endif -%}
+
+            {%- assign i = 0 -%}
+            {%- for f in collection.filters -%}
+              {%- if f.param_name contains 'availability' -%}{%- continue -%}{%- endif -%}
+              {% render 'filter-group', filter: f, index: i %}
+              {%- assign i = i | plus: 1 -%}
+            {%- endfor -%}
+
+            {%- if i == 0 -%}
+              <p class="rail__note">No filters are set up for this collection yet.</p>
+            {%- endif -%}
+          {%- else -%}
+            <p class="rail__note">
+              Filters come from the Search &amp; Discovery app. Add Price, Colour,
+              Size and Category there and they will appear here.
+            </p>
+          {%- endif -%}
+
+          <noscript><button type="submit" class="btn btn-solid rail__go">Apply</button></noscript>
+        </form>
+      </aside>
+
+      {%- comment -%} ── Results ── {%- endcomment -%}
+      <div class="coll__main">
+
+        <div class="coll__bar">
+          <button type="button" class="coll__toggle" data-facet-open aria-controls="coll-facets" aria-expanded="false">
+            <svg width="17" height="15" viewBox="0 0 17 15" fill="none" aria-hidden="true">
+              <path d="M1 3h10M14 3h2M1 11h2M6 11h10M12 1v4M4 9v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+            Filter
+          </button>
+
+          {%- if s.show_sort -%}
+            <label class="coll__sort">
+              <span class="sr-only">Sort by</span>
+              <select data-sort-select>
+                {%- assign current = collection.sort_by | default: collection.default_sort_by -%}
+                {%- for option in collection.sort_options -%}
+                  <option value="{{ option.value }}" {% if option.value == current %}selected{% endif %}>{{ option.name }}</option>
+                {%- endfor -%}
+              </select>
+            </label>
+          {%- endif -%}
+        </div>
+
+        {%- assign shown = 0 -%}
+        <div class="coll__grid" data-anim="stagger">
+          {%- for product in collection.products -%}
+            {%- unless product.available -%}{%- continue -%}{%- endunless -%}
+            {%- assign shown = shown | plus: 1 -%}
+            {% render 'product-card', product: product, sizes: '(min-width: 1024px) 24vw, 50vw' %}
+          {%- endfor -%}
+        </div>
+
+        {%- if shown == 0 -%}
+          <p class="coll__empty">
+            Nothing here yet. Try clearing a selection.
+          </p>
+        {%- endif -%}
+
+        {%- if paginate.pages > 1 -%}
+          <nav class="coll__pages" aria-label="Pagination">
+            {%- if paginate.previous -%}<a href="{{ paginate.previous.url }}" class="link-underline">Prev</a>{%- endif -%}
+            <span class="coll__pageno">{{ paginate.current_page }} / {{ paginate.pages }}</span>
+            {%- if paginate.next -%}<a href="{{ paginate.next.url }}" class="link-underline">Next</a>{%- endif -%}
+          </nav>
+        {%- endif -%}
+      </div>
     </div>
-
-    {%- if paginate.pages > 1 -%}
-      <nav class="mt-14 flex justify-center gap-3 text-[14px] tracking-widest2 uppercase">
-        {%- if paginate.previous -%}<a href="{{ paginate.previous.url }}" class="link-underline">Prev</a>{%- endif -%}
-        {%- if paginate.next -%}<a href="{{ paginate.next.url }}" class="link-underline">Next</a>{%- endif -%}
-      </nav>
-    {%- endif -%}
     {%- endpaginate -%}
   </div>
 </section>
 
 {% stylesheet %}
+  /* Layout */
+  .coll-head { margin-bottom: 2.5rem; }
+  .coll { display: grid; gap: 2.5rem; }
+  @media (min-width: 1024px) {
+    .coll { grid-template-columns: 250px minmax(0, 1fr); gap: 3.5rem; align-items: start; }
+  }
+  .coll__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1.25rem;
+    row-gap: 2.5rem;
+  }
+  @media (min-width: 1024px) { .coll__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (min-width: 1280px) { .coll__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .coll__empty { padding-block: 3rem; font-size: 15px; color: var(--color-ink); }
+  .coll__pages {
+    margin-top: 3.5rem; display: flex; justify-content: center; align-items: center; gap: 1.25rem;
+    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+  }
+  .coll__pageno { color: var(--color-plum); }
+
+  /* Sort + mobile trigger */
+  .coll__bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding-bottom: 1rem; margin-bottom: 1.75rem; border-bottom: 1px solid rgb(74 36 41 / 0.12);
+  }
+  .coll__toggle {
+    display: inline-flex; align-items: center; gap: 0.6rem; cursor: pointer;
+    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    color: var(--color-plum);
+  }
+  @media (min-width: 1024px) { .coll__toggle { display: none; } }
+  .coll__sort select {
+    font-size: 14px; letter-spacing: 0.06em; color: var(--color-plum);
+    background: transparent; border: 1px solid rgb(74 36 41 / 0.25);
+    padding: 0.55rem 2rem 0.55rem 0.85rem; cursor: pointer;
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: right 0.95rem center, right 0.7rem center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+  .coll__sort select:focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+
+  /* Rail */
+  .coll__rail { min-width: 0; }
+  @media (max-width: 1023px) {
+    .coll__rail {
+      position: fixed; inset: 0 auto 0 0; z-index: 60; width: min(86vw, 340px);
+      background: var(--color-paper); padding: 1.5rem 1.35rem 3rem; overflow-y: auto;
+      transform: translateX(-100%); visibility: hidden;
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.4s;
+      box-shadow: 0 0 40px rgb(74 36 41 / 0.13);
+    }
+    .coll__rail.is-open { transform: translateX(0); visibility: visible; }
+  }
+  .rail__top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .rail__title {
+    display: inline-flex; align-items: center; gap: 0.7rem;
+    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    color: var(--color-plum);
+  }
+  .rail__close { font-size: 26px; line-height: 1; color: var(--color-plum); cursor: pointer; }
+  @media (min-width: 1024px) { .rail__close { display: none; } }
+  .rail__clear {
+    display: flex; align-items: center; justify-content: center; gap: 0.55rem; width: 100%;
+    background: var(--color-plum); color: var(--color-cream);
+    padding: 0.85rem 1rem; margin-bottom: 0.5rem;
+    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    transition: background 0.35s ease;
+  }
+  .rail__clear:hover { background: var(--color-amber); }
+  .rail__note { font-size: 14px; line-height: 1.6; color: var(--color-ink); padding-block: 0.5rem; }
+  .rail__go { width: 100%; justify-content: center; margin-top: 1rem; }
+
+  /* Facet group */
+  .fg { border-top: 1px solid rgb(74 36 41 / 0.12); }
+  .fg__head {
+    display: flex; align-items: center; gap: 0.7rem; cursor: pointer; list-style: none;
+    padding-block: 1.1rem;
+    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    color: var(--color-plum);
+  }
+  .fg__head::-webkit-details-marker { display: none; }
+  .fg__title { flex: 1 1 auto; }
+  .fg__chev { display: inline-flex; transition: transform 0.3s ease; }
+  .fg[open] .fg__chev { transform: rotate(180deg); }
+  .fg__reset { font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-amber); }
+  .fg__reset:hover { text-decoration: underline; }
+  .fg__body { padding-bottom: 1.5rem; }
+
+  /* Checkbox list */
+  .cks { display: flex; flex-direction: column; gap: 0.7rem; }
+  .ck { display: flex; align-items: center; gap: 0.7rem; cursor: pointer; font-size: 14px; }
+  .ck input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .ck__box {
+    width: 17px; height: 17px; flex: 0 0 auto;
+    border: 1px solid rgb(74 36 41 / 0.35); transition: all 0.2s ease;
+  }
+  .ck input:checked + .ck__box {
+    background: var(--color-plum); border-color: var(--color-plum);
+    background-image: linear-gradient(45deg, transparent 42%, var(--color-cream) 42%, var(--color-cream) 56%, transparent 56%);
+  }
+  .ck input:focus-visible + .ck__box { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+  .ck__label { flex: 1 1 auto; color: var(--color-ink); }
+  .ck__count { color: var(--color-plum); }
+  .ck.is-off { cursor: default; opacity: 0.4; }
+
+  /* Size chips */
+  .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .chip { display: block; cursor: pointer; }
+  .chip input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .chip span {
+    display: block; text-align: center; padding: 0.7rem 0.4rem;
+    border: 1px solid rgb(74 36 41 / 0.25);
+    font-size: 14px; letter-spacing: 0.06em; color: var(--color-plum);
+    transition: all 0.25s ease;
+  }
+  .chip input:checked + span { background: var(--color-plum); border-color: var(--color-plum); color: var(--color-cream); }
+  .chip input:focus-visible + span { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+  .chip.is-off { cursor: default; opacity: 0.4; }
+
+  /* Colour swatches */
+  .sw { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+  .sw__item { position: relative; display: block; cursor: pointer; }
+  .sw__item input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .sw__dot {
+    display: block; width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid rgb(74 36 41 / 0.2);
+    box-shadow: 0 0 0 0 var(--color-plum); transition: box-shadow 0.2s ease;
+  }
+  .sw__item input:checked + .sw__dot { box-shadow: 0 0 0 2px var(--color-paper), 0 0 0 3.5px var(--color-plum); }
+  .sw__item input:focus-visible + .sw__dot { outline: 2px solid var(--color-amber); outline-offset: 3px; }
+  .sw__item.is-off { cursor: default; opacity: 0.35; }
+  .sw__tip {
+    position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%);
+    white-space: nowrap; pointer-events: none; opacity: 0;
+    background: var(--color-plum); color: var(--color-cream);
+    padding: 0.3rem 0.5rem; font-size: 12px; letter-spacing: 0.04em;
+    transition: opacity 0.2s ease;
+  }
+  .sw__item:hover .sw__tip { opacity: 1; }
+
+  /* Price */
+  .pr__track { position: relative; height: 30px; }
+  .pr__track::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 14px; height: 2px;
+    background: rgb(74 36 41 / 0.18);
+  }
+  .pr__fill { position: absolute; top: 14px; height: 2px; background: var(--color-plum); }
+  .pr__track input[type="range"] {
+    position: absolute; inset: 0; width: 100%; margin: 0;
+    appearance: none; background: transparent; pointer-events: none;
+  }
+  .pr__track input[type="range"]::-webkit-slider-thumb {
+    appearance: none; pointer-events: auto; cursor: grab;
+    width: 17px; height: 17px; border-radius: 50%;
+    background: var(--color-paper); border: 2px solid var(--color-plum);
+  }
+  .pr__track input[type="range"]::-moz-range-thumb {
+    pointer-events: auto; cursor: grab;
+    width: 17px; height: 17px; border-radius: 50%;
+    background: var(--color-paper); border: 2px solid var(--color-plum);
+  }
+  .pr__fields { display: flex; align-items: center; gap: 0.7rem; margin-top: 0.9rem; }
+  .pr__field { flex: 1 1 0; }
+  .pr__field input {
+    width: 100%; text-align: center; padding: 0.6rem 0.4rem;
+    border: 1px solid rgb(74 36 41 / 0.25); background: transparent;
+    font-size: 14px; color: var(--color-plum);
+  }
+  .pr__field input:focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+  .pr__dash { color: var(--color-plum); }
+
+  /* Scrim behind the mobile rail */
+  .coll-scrim {
+    position: fixed; inset: 0; z-index: 55; background: rgb(46 26 29 / 0.35);
+    opacity: 0; visibility: hidden; transition: opacity 0.35s ease, visibility 0.35s;
+  }
+  .coll-scrim.is-open { opacity: 1; visibility: visible; }
+  @media (min-width: 1024px) { .coll-scrim { display: none; } }
+
   .card-media img { transition: transform 1.1s cubic-bezier(0.22,1,0.36,1); }
   .group:hover .card-media img { transform: scale(1.045); }
 {% endstylesheet %}
 
 {% schema %}
-{ "name": "Collection", "settings": [] }
+{
+  "name": "Collection",
+  "settings": [
+    { "type": "range", "id": "per_page", "label": "Products per page", "min": 12, "max": 48, "step": 4, "default": 24 },
+    { "type": "checkbox", "id": "show_sort", "label": "Show sort dropdown", "default": true }
+  ]
+}
 {% endschema %}

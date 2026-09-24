@@ -11,7 +11,7 @@
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var hasGSAP = typeof window.gsap !== 'undefined';
 
-  /* ── Header: always visible, gains a shadow once the page scrolls ─── */
+  /* ── Header: always visible, gains a shadow once the page scrolls ── */
   function initHeader() {
     var header = document.querySelector('[data-header]');
     if (!header) return;
@@ -24,7 +24,7 @@
     window.addEventListener('scroll', onScroll, { passive: true });
   }
 
-  /* ── Scroll reveals ─────────────────────────────────────────── */
+  /* ── Scroll reveals ── */
   function initReveals() {
     if (!hasGSAP || reduced) return;
     gsap.registerPlugin(ScrollTrigger);
@@ -77,7 +77,7 @@
     }
   }
 
-  /* ── Carousel (new arrivals) ────────────────────────────────── */
+  /* ── Carousel (new arrivals) ── */
   function initCarousels() {
     document.querySelectorAll('[data-carousel]').forEach(function (root) {
       var track = root.querySelector('[data-carousel-track]');
@@ -171,7 +171,7 @@
     });
   }
 
-  /* ── Mobile menu ────────────────────────────────────────────── */
+  /* ── Mobile menu ── */
   function initMenu() {
     var toggle = document.querySelector('[data-menu-toggle]');
     var panel = document.querySelector('[data-menu-panel]');
@@ -195,10 +195,120 @@
     });
   }
 
+  /* ── Collection filters: drawer, price slider, auto-apply ── */
+  function initFilters() {
+    var form = document.querySelector('[data-facet-form]');
+    if (!form) return;
+
+    var panel = document.querySelector('[data-facet-panel]');
+
+    /* Mobile drawer. The rail is inline from 1024px up, so the scrim and the
+       open/close buttons simply have nothing to do there. */
+    var scrim = document.createElement('div');
+    scrim.className = 'coll-scrim';
+    document.body.appendChild(scrim);
+
+    function setOpen(open) {
+      panel.classList.toggle('is-open', open);
+      scrim.classList.toggle('is-open', open);
+      document.body.style.overflow = open ? 'hidden' : '';
+      var trigger = document.querySelector('[data-facet-open]');
+      if (trigger) trigger.setAttribute('aria-expanded', String(open));
+    }
+
+    var openBtn = document.querySelector('[data-facet-open]');
+    if (openBtn) openBtn.addEventListener('click', function () { setOpen(true); });
+    var closeBtn = document.querySelector('[data-facet-close]');
+    if (closeBtn) closeBtn.addEventListener('click', function () { setOpen(false); });
+    scrim.addEventListener('click', function () { setOpen(false); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') setOpen(false);
+    });
+
+    /* Sort lives outside the form so it reads naturally above the grid;
+       mirror it into a hidden input and submit. */
+    var sortSelect = document.querySelector('[data-sort-select]');
+    var sortMirror = form.querySelector('[data-sort-mirror]');
+    if (sortSelect && sortMirror) {
+      sortSelect.addEventListener('change', function () {
+        sortMirror.value = sortSelect.value;
+        form.requestSubmit ? form.requestSubmit() : form.submit();
+      });
+    }
+
+    /* Two overlapping range inputs behave as one dual-handle slider: each
+       handle is clamped to the other so they cannot cross, and the filled
+       span between them is drawn from their current values. */
+    var price = form.querySelector('[data-price]');
+    if (price) {
+      var cap = parseFloat(price.getAttribute('data-cap')) || 0;
+      var lo = price.querySelector('[data-price-lo]');
+      var hi = price.querySelector('[data-price-hi]');
+      var fill = price.querySelector('[data-price-fill]');
+      var minField = price.querySelector('[data-price-min]');
+      var maxField = price.querySelector('[data-price-max]');
+
+      function paint() {
+        if (!cap) return;
+        var a = (parseFloat(lo.value) / cap) * 100;
+        var b = (parseFloat(hi.value) / cap) * 100;
+        fill.style.left = a + '%';
+        fill.style.width = Math.max(0, b - a) + '%';
+      }
+
+      function fromSlider() {
+        if (parseFloat(lo.value) > parseFloat(hi.value)) {
+          if (document.activeElement === lo) lo.value = hi.value;
+          else hi.value = lo.value;
+        }
+        minField.value = lo.value > 0 ? lo.value : '';
+        maxField.value = hi.value < cap ? hi.value : '';
+        paint();
+      }
+
+      function fromField() {
+        lo.value = minField.value === '' ? 0 : minField.value;
+        hi.value = maxField.value === '' ? cap : maxField.value;
+        paint();
+      }
+
+      lo.addEventListener('input', fromSlider);
+      hi.addEventListener('input', fromSlider);
+      lo.addEventListener('change', submit);
+      hi.addEventListener('change', submit);
+      minField.addEventListener('input', fromField);
+      maxField.addEventListener('input', fromField);
+      paint();
+    }
+
+    /* Checkboxes apply immediately; the number fields wait for a pause so the
+       page does not reload on every keystroke. */
+    var timer;
+    function submit() {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        form.requestSubmit ? form.requestSubmit() : form.submit();
+      }, 60);
+    }
+
+    form.addEventListener('change', function (e) {
+      if (e.target.type === 'checkbox') submit();
+    });
+    form.addEventListener('input', function (e) {
+      if (e.target.type === 'number') {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          form.requestSubmit ? form.requestSubmit() : form.submit();
+        }, 700);
+      }
+    });
+  }
+
   function init() {
     initHeader();
     initMenu();
     initCarousels();
+    initFilters();
     initReveals();
   }
 

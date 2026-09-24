@@ -1,0 +1,127 @@
+{%- comment -%}
+  One collapsible facet in the collection sidebar.
+
+  Shopify hands every facet back as the same `filter` drop, so the group
+  chrome — heading, reset link, disclosure — is shared here and only the
+  control inside it varies by facet.
+
+  @param {object} filter - an entry from collection.filters
+  @param {number} index  - position, used to keep the first groups open
+{%- endcomment -%}
+
+{%- liquid
+  assign is_color = false
+  assign is_size = false
+  if filter.param_name contains 'option.color' or filter.param_name contains 'option.colour'
+    assign is_color = true
+  endif
+  if filter.param_name contains 'option.size'
+    assign is_size = true
+  endif
+
+  assign active = 0
+  for value in filter.values
+    if value.active
+      assign active = active | plus: 1
+    endif
+  endfor
+-%}
+
+<details class="fg" {% if index < 4 or active > 0 %}open{% endif %}>
+  <summary class="fg__head">
+    <span class="fg__chev" aria-hidden="true">
+      <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1 6l4.5-4.5L10 6" stroke="currentColor" stroke-width="1.3"/></svg>
+    </span>
+    <span class="fg__title">{{ filter.label }}</span>
+    {%- if active > 0 -%}
+      <a href="{{ filter.url_to_remove }}" class="fg__reset">{{ 'collections.filters.reset' | t: default: 'Reset' }}</a>
+    {%- endif -%}
+  </summary>
+
+  <div class="fg__body">
+    {%- case filter.type -%}
+
+      {%- when 'price_range' -%}
+        {%- liquid
+          assign cap = filter.range_max | divided_by: 100
+          assign lo = filter.min_value.value | default: 0 | divided_by: 100
+          assign hi = filter.max_value.value | default: filter.range_max | divided_by: 100
+        -%}
+        <div class="pr" data-price data-cap="{{ cap }}">
+          <div class="pr__track">
+            <span class="pr__fill" data-price-fill></span>
+            <input type="range" min="0" max="{{ cap }}" value="{{ lo }}" data-price-lo aria-label="Minimum price">
+            <input type="range" min="0" max="{{ cap }}" value="{{ hi }}" data-price-hi aria-label="Maximum price">
+          </div>
+          <div class="pr__fields">
+            <label class="pr__field">
+              <span class="sr-only">Minimum price</span>
+              <input type="number" name="{{ filter.min_value.param_name }}" min="0" max="{{ cap }}"
+                     value="{% if filter.min_value.value %}{{ lo }}{% endif %}" placeholder="0" data-price-min>
+            </label>
+            <span class="pr__dash" aria-hidden="true">&mdash;</span>
+            <label class="pr__field">
+              <span class="sr-only">Maximum price</span>
+              <input type="number" name="{{ filter.max_value.param_name }}" min="0" max="{{ cap }}"
+                     value="{% if filter.max_value.value %}{{ hi }}{% endif %}" placeholder="{{ cap }}" data-price-max>
+            </label>
+          </div>
+        </div>
+
+      {%- else -%}
+        {%- if is_color -%}
+          <ul class="sw" role="list">
+            {%- for value in filter.values -%}
+              {%- liquid
+                assign dot = value.label | downcase | replace: ' ', ''
+                if value.swatch.color
+                  assign dot = value.swatch.color
+                endif
+              -%}
+              <li>
+                <label class="sw__item{% if value.count == 0 and value.active == false %} is-off{% endif %}">
+                  <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value }}"
+                         {% if value.active %}checked{% endif %}
+                         {% if value.count == 0 and value.active == false %}disabled{% endif %}>
+                  <span class="sw__dot"
+                        style="background: {% if value.swatch.image %}url({{ value.swatch.image | image_url: width: 60 }}) center/cover{% else %}{{ dot }}{% endif %};"></span>
+                  <span class="sw__tip">{{ value.label }} ({{ value.count }})</span>
+                </label>
+              </li>
+            {%- endfor -%}
+          </ul>
+
+        {%- elsif is_size -%}
+          <ul class="chips" role="list">
+            {%- for value in filter.values -%}
+              <li>
+                <label class="chip{% if value.count == 0 and value.active == false %} is-off{% endif %}">
+                  <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value }}"
+                         {% if value.active %}checked{% endif %}
+                         {% if value.count == 0 and value.active == false %}disabled{% endif %}>
+                  <span>{{ value.label }}</span>
+                </label>
+              </li>
+            {%- endfor -%}
+          </ul>
+
+        {%- else -%}
+          <ul class="cks" role="list">
+            {%- for value in filter.values -%}
+              <li>
+                <label class="ck{% if value.count == 0 and value.active == false %} is-off{% endif %}">
+                  <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value }}"
+                         {% if value.active %}checked{% endif %}
+                         {% if value.count == 0 and value.active == false %}disabled{% endif %}>
+                  <span class="ck__box" aria-hidden="true"></span>
+                  <span class="ck__label">{{ value.label }}</span>
+                  <span class="ck__count">({{ value.count }})</span>
+                </label>
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+    {%- endcase -%}
+  </div>
+</details>
