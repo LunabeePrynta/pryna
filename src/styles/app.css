@@ -134,6 +134,17 @@
     color: var(--color-plum);
   }
 
+  /* Product names run in the sans face rather than the display serif. This
+     has to outrank the h1/h3 serif rule in @layer base, which it does by
+     sitting in a later layer — while still losing to the text-* utilities
+     that set each usage's own size. Deliberately no font-size here: the card,
+     the carousel, the cart line and the product page all want a different one.
+     The tracking reset undoes the -0.015em base applies for the serif. */
+  .product-name {
+    font-family: var(--font-sans);
+    letter-spacing: normal;
+  }
+
   /* Placeholder used where a merchant has not set an image yet */
   .ph {
     display: grid;
