@@ -18,7 +18,7 @@
         <p class="eyebrow mb-4">{{ product.type }}</p>
       {%- endif -%}
 
-      <h1 class="font-display text-plum text-[38px] md:text-[52px] leading-[1.03]">{{ product.title }}</h1>
+      <h1 class="product-name text-plum text-[38px] md:text-[52px] leading-[1.03]">{{ product.title }}</h1>
       {% render 'price', product: product, class: 'mt-4 block text-[18px] text-plum' %}
 
       {%- form 'product', product, class: 'mt-8' -%}

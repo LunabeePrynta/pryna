@@ -39,6 +39,17 @@
         --color-clay: {{ settings.color_clay }};
         --display-scale: {{ settings.display_scale | default: 100 | divided_by: 100.0 }};
       }
+
+      /* Product names run in the sans face rather than the display serif.
+         They sit in h1/h3 elements, and app.css sets the serif on those in
+         @layer base — an unlayered rule here outranks any cascade layer, so
+         this lands without a matching utility in the compiled sheet. The
+         tracking reset undoes the -0.015em tightening base applies for the
+         serif; Jost does not want it. */
+      .product-name {
+        font-family: var(--font-sans);
+        letter-spacing: normal;
+      }
     </style>
 
     {{ content_for_header }}

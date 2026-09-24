@@ -14,7 +14,7 @@
                 {% render 'media', image: item.image, label: item.product.title, ratio: '3/4', tone: 'sand', sizes: '96px' %}
               </a>
               <div class="flex-1 min-w-0">
-                <a href="{{ item.url }}" class="font-display text-plum text-[21px] leading-tight hover:text-amber transition-colors">{{ item.product.title }}</a>
+                <a href="{{ item.url }}" class="product-name text-plum text-[21px] leading-tight hover:text-amber transition-colors">{{ item.product.title }}</a>
                 {%- unless item.variant.title contains 'Default' -%}
                   <p class="mt-1 text-[14px] tracking-wide text-ink">{{ item.variant.title }}</p>
                 {%- endunless -%}
