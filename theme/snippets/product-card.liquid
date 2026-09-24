@@ -17,6 +17,28 @@
         tone: 'sand',
         sizes: card_sizes
       %}
+      {%- comment -%}
+        Second shot for the hover swap. Decorative: it is the same product and
+        the primary image already carries the alt text.
+      {%- endcomment -%}
+      {%- if product.images.size > 1 -%}
+        {%- assign alt_image = product.images[1] -%}
+        <img
+          class="card-alt"
+          src="{{ alt_image | image_url: width: 800 }}"
+          srcset="
+            {{ alt_image | image_url: width: 400 }} 400w,
+            {{ alt_image | image_url: width: 800 }} 800w,
+            {{ alt_image | image_url: width: 1200 }} 1200w
+          "
+          sizes="{{ card_sizes }}"
+          alt=""
+          aria-hidden="true"
+          width="{{ alt_image.width }}"
+          height="{{ alt_image.height }}"
+          loading="lazy"
+        >
+      {%- endif -%}
       {%- unless product.available -%}
         <span class="absolute top-3 left-3 bg-paper/95 text-plum text-ui tracking-widest2 uppercase px-2.5 py-1.5">
           {{ 'products.product.sold_out' | t }}

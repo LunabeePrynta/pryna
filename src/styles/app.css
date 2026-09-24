@@ -145,6 +145,36 @@
     letter-spacing: normal;
   }
 
+  /* Product card media. These lived in five section stylesheets, which Shopify
+     emits unlayered — and unlayered beats every cascade layer whatever the
+     specificity, so a copy there would silently win over anything here. One
+     layered definition instead, which also lets the swap rule below outrank
+     the zoom by specificity. */
+  .card-media img {
+    transition: transform 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .group:hover .card-media img { transform: scale(1.045); }
+
+  /* The second product image fades in over the first on hover, so the grid
+     previews the alternate shot without a click. Hover-capable pointers only:
+     on touch there is no hover to leave and the swap would stick after a tap. */
+  @media (hover: hover) {
+    .card-media .card-alt {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .group:hover .card-media .card-alt { opacity: 1; }
+  }
+  @media not all and (hover: hover) {
+    .card-alt { display: none; }
+  }
+
   /* Placeholder used where a merchant has not set an image yet */
   .ph {
     display: grid;
