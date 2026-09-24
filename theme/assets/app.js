@@ -337,7 +337,7 @@
        private window or blocked storage just falls back to the default. */
     var saved = null;
     try { saved = localStorage.getItem(KEY); } catch (err) {}
-    apply(saved && /^[1-5]$/.test(saved) ? saved : '4');
+    apply(saved && /^[1-4]$/.test(saved) ? saved : '4');
 
     buttons.forEach(function (b) {
       b.addEventListener('click', function () {

@@ -7,9 +7,9 @@
   assign card_sizes = sizes | default: '(min-width: 1024px) 25vw, 50vw'
 -%}
 
-<article>
-  <a href="{{ product.url }}" class="group block">
-    <div class="relative overflow-hidden card-media">
+<article class="pcard">
+  <a href="{{ product.url }}" class="group block pcard__link">
+    <div class="relative overflow-hidden card-media pcard__media">
       {% render 'media',
         image: product.featured_image,
         label: product.title,
@@ -50,14 +50,44 @@
       is allowed to wrap; the price is shrink-0 so a long name pushes the row
       taller rather than squeezing the figure.
     {%- endcomment -%}
-    <div class="mt-3.5">
-      <div class="flex items-baseline justify-between gap-4">
+    {%- comment -%}
+      Everything below is rendered at every density. The pieces the grid has
+      no room for carry `hidden` and are revealed only by the one-per-row
+      rules in main-collection, which are unlayered and so outrank it.
+    {%- endcomment -%}
+    <div class="mt-3.5 pcard__body">
+      {%- comment -%} Colour dots, one-per-row only. {%- endcomment -%}
+      {%- for option in product.options_with_values -%}
+        {%- assign oname = option.name | downcase -%}
+        {%- if oname == 'color' or oname == 'colour' -%}
+          <div class="pcard__swatches hidden">
+            {%- for value in option.values -%}
+              <span class="pcard__sw" style="background: {{ value | downcase | replace: ' ', '' }};" title="{{ value }}"></span>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+
+      <div class="pcard__head flex items-baseline justify-between gap-4">
         <h3 class="product-name text-plum text-[16px] font-medium leading-tight group-hover:text-amber transition-colors">{{ product.title }}</h3>
-        {% render 'price', product: product, class: 'text-[18px] text-plum shrink-0 whitespace-nowrap' %}
+        {% render 'price', product: product, class: 'pcard__price text-[18px] text-plum shrink-0 whitespace-nowrap' %}
       </div>
+
       {%- if product.type != blank -%}
-        <p class="mt-2 text-ui tracking-widest2 uppercase text-ink">{{ product.type }}</p>
+        <p class="pcard__type mt-2 text-ui tracking-widest2 uppercase text-ink">{{ product.type }}</p>
       {%- endif -%}
+
+      {%- if product.description != blank -%}
+        <p class="pcard__desc hidden">{{ product.description | strip_html | truncatewords: 34 }}</p>
+      {%- endif -%}
+
+      {%- comment -%}
+        A span, not a link: the whole card is already one anchor and nesting
+        anchors is invalid. It points at the product page either way.
+      {%- endcomment -%}
+      <span class="pcard__cta hidden">
+        {%- if product.has_only_default_variant -%}View product{%- else -%}Choose options{%- endif -%}
+      </span>
     </div>
   </a>
 </article>
