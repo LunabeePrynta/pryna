@@ -23,7 +23,7 @@
 <footer class="ft">
   <div class="wrap">
 
-    {%- comment -%} ── Newsletter · perks · apps ───────────────── {%- endcomment -%}
+    {%- comment -%} ── Newsletter · perks · apps ── {%- endcomment -%}
     {%- if s.show_newsletter or perks.size > 0 or apps.size > 0 -%}
       <div class="ft__top">
 
@@ -134,7 +134,7 @@
       </div>
     {%- endif -%}
 
-    {%- comment -%} ── Brand · menus · contact ─────────────────── {%- endcomment -%}
+    {%- comment -%} ── Brand · menus · contact ── {%- endcomment -%}
     <div
       class="ft__main"
       {% if menu_cols > 0 %}style="--ft-menus: {{ menu_cols }};"{% endif %}
@@ -243,7 +243,7 @@
       {%- endif -%}
     </div>
 
-    {%- comment -%} ── Copyright · payment ─────────────────────── {%- endcomment -%}
+    {%- comment -%} ── Copyright · payment ── {%- endcomment -%}
     <div class="ft__base">
       <p>&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}{% if s.city != blank %} &middot; {{ s.city }}{% endif %}</p>
       {%- if s.show_payment_icons and shop.enabled_payment_types.size > 0 -%}
@@ -264,7 +264,7 @@
     border-top: 1px solid rgb(253 243 205 / 0.1);
   }
 
-  /* Top band ----------------------------------------------------------- */
+  /* Top band */
   .ft__top {
     display: grid;
     gap: 3rem;
@@ -327,7 +327,7 @@
   .ft__send:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
   .ft__note { margin-top: 0.7rem; font-size: var(--text-ui); color: var(--color-gold); }
 
-  /* Service promises --------------------------------------------------- */
+  /* Service promises */
   .ft__perks {
     display: grid;
     gap: 1.75rem 2rem;
@@ -348,7 +348,7 @@
   .ft__perk-title { font-size: 16px; font-weight: 500; color: var(--color-cream); }
   .ft__perk-text { font-size: 14px; font-weight: 300; color: rgb(253 243 205 / 0.75); }
 
-  /* App links ---------------------------------------------------------- */
+  /* App links */
   .ft__apps-title {
     font-size: 16px;
     font-weight: 500;
@@ -360,7 +360,7 @@
   .ft__app { transition: opacity 0.3s ease; }
   .ft__app:hover { opacity: 0.8; }
 
-  /* Lower band --------------------------------------------------------- */
+  /* Lower band */
   .ft__main {
     display: grid;
     gap: 2.5rem;
@@ -405,7 +405,7 @@
   .ft__line { display: flex; align-items: flex-start; gap: 0.7rem; font-size: 15px; font-weight: 300; color: rgb(253 243 205 / 0.8); }
   .ft__line svg { flex: 0 0 auto; margin-top: 0.25rem; color: var(--color-amber); }
 
-  /* Base bar ----------------------------------------------------------- */
+  /* Base bar */
   .ft__base {
     display: flex;
     flex-wrap: wrap;
