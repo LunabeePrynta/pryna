@@ -9,7 +9,21 @@
 
 {%- liquid
   assign s = section.settings
-  assign per_page = s.per_page | default: 24
+  assign per_page = s.per_page | default: 16
+
+  comment
+    Liquid cannot read arbitrary query params, so items-per-page rides on
+    Shopify's ?view= alternate templates. Each templates/collection.N.json is
+    an empty shell; the count it stands for is read back off template.suffix.
+  endcomment
+  case template.suffix
+    when '16'
+      assign per_page = 16
+    when '24'
+      assign per_page = 24
+    when '48'
+      assign per_page = 48
+  endcase
 -%}
 
 <section class="py-10 md:py-16">
@@ -89,28 +103,59 @@
       <div class="coll__main">
 
         <div class="coll__bar">
-          <button type="button" class="coll__toggle" data-facet-open aria-controls="coll-facets" aria-expanded="false">
-            <svg width="17" height="15" viewBox="0 0 17 15" fill="none" aria-hidden="true">
-              <path d="M1 3h10M14 3h2M1 11h2M6 11h10M12 1v4M4 9v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-            </svg>
-            Filter
-          </button>
+          <div class="coll__bar-side">
+            <button type="button" class="coll__toggle" data-facet-open aria-controls="coll-facets" aria-expanded="false">
+              <svg width="17" height="15" viewBox="0 0 17 15" fill="none" aria-hidden="true">
+                <path d="M1 3h10M14 3h2M1 11h2M6 11h10M12 1v4M4 9v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+              Filter
+            </button>
 
-          {%- if s.show_sort -%}
-            <label class="coll__sort">
-              <span class="sr-only">Sort by</span>
-              <select data-sort-select>
-                {%- assign current = collection.sort_by | default: collection.default_sort_by -%}
-                {%- for option in collection.sort_options -%}
-                  <option value="{{ option.value }}" {% if option.value == current %}selected{% endif %}>{{ option.name }}</option>
+            {%- if s.show_density -%}
+              <div class="viewas" data-cols-group>
+                <span class="viewas__lbl">View as</span>
+                {%- for n in (1..5) -%}
+                  <button type="button" class="viewas__b" data-cols="{{ n }}"
+                          aria-label="{{ n }} per row" aria-pressed="false">
+                    <span class="viewas__bars">
+                      {%- for i in (1..n) -%}<i></i>{%- endfor -%}
+                    </span>
+                  </button>
                 {%- endfor -%}
-              </select>
-            </label>
-          {%- endif -%}
+              </div>
+            {%- endif -%}
+          </div>
+
+          <div class="coll__bar-side">
+            {%- if s.show_per_page -%}
+              <label class="coll__ctl">
+                <span class="coll__ctl-lbl">Items per page</span>
+                <select data-per-page>
+                  {%- assign choices = s.per_page_options | split: ',' -%}
+                  {%- for choice in choices -%}
+                    {%- assign n = choice | strip | plus: 0 -%}
+                    <option value="{{ n }}" {% if n == per_page %}selected{% endif %}>{{ n }}</option>
+                  {%- endfor -%}
+                </select>
+              </label>
+            {%- endif -%}
+
+            {%- if s.show_sort -%}
+              <label class="coll__ctl">
+                <span class="coll__ctl-lbl">Sort by:</span>
+                <select data-sort-select>
+                  {%- assign current = collection.sort_by | default: collection.default_sort_by -%}
+                  {%- for option in collection.sort_options -%}
+                    <option value="{{ option.value }}" {% if option.value == current %}selected{% endif %}>{{ option.name }}</option>
+                  {%- endfor -%}
+                </select>
+              </label>
+            {%- endif -%}
+          </div>
         </div>
 
         {%- assign shown = 0 -%}
-        <div class="coll__grid" data-anim="stagger">
+        <div class="coll__grid" data-grid data-anim="stagger">
           {%- for product in collection.products -%}
             {%- unless product.available -%}{%- continue -%}{%- endunless -%}
             {%- assign shown = shown | plus: 1 -%}
@@ -152,6 +197,14 @@
   }
   @media (min-width: 1024px) { .coll__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (min-width: 1280px) { .coll__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  /* Chosen density wins over the responsive defaults, desktop only. */
+  @media (min-width: 1024px) {
+    .coll__grid[data-cols="1"] { grid-template-columns: minmax(0, 1fr); }
+    .coll__grid[data-cols="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .coll__grid[data-cols="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .coll__grid[data-cols="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .coll__grid[data-cols="5"] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  }
   .coll__empty { padding-block: 3rem; font-size: 15px; color: var(--color-ink); }
   .coll__pages {
     margin-top: 3.5rem; display: flex; justify-content: center; align-items: center; gap: 1.25rem;
@@ -159,29 +212,59 @@
   }
   .coll__pageno { color: var(--color-plum); }
 
-  /* Sort + mobile trigger */
+  /* Toolbar: density, per-page, sort */
   .coll__bar {
-    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem 1.75rem; flex-wrap: wrap;
     padding-bottom: 1rem; margin-bottom: 1.75rem; border-bottom: 1px solid rgb(74 36 41 / 0.12);
   }
+  .coll__bar-side { display: flex; align-items: center; gap: 1.5rem; }
   .coll__toggle {
     display: inline-flex; align-items: center; gap: 0.6rem; cursor: pointer;
     font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
     color: var(--color-plum);
   }
   @media (min-width: 1024px) { .coll__toggle { display: none; } }
-  .coll__sort select {
-    font-size: 14px; letter-spacing: 0.06em; color: var(--color-plum);
-    background: transparent; border: 1px solid rgb(74 36 41 / 0.25);
-    padding: 0.55rem 2rem 0.55rem 0.85rem; cursor: pointer;
+
+  .coll__ctl { display: inline-flex; align-items: center; gap: 0.6rem; }
+  .coll__ctl-lbl {
+    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    color: var(--color-plum); white-space: nowrap;
+  }
+  .coll__ctl select {
+    font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--color-plum); background: transparent; border: 0;
+    padding: 0.3rem 1.4rem 0.3rem 0; cursor: pointer;
     appearance: none;
     background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
                       linear-gradient(135deg, currentColor 50%, transparent 50%);
-    background-position: right 0.95rem center, right 0.7rem center;
+    background-position: right 0.35rem center, right 0.1rem center;
     background-size: 5px 5px, 5px 5px;
     background-repeat: no-repeat;
   }
-  .coll__sort select:focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+  .coll__ctl select:focus-visible { outline: 2px solid var(--color-amber); outline-offset: 3px; }
+  @media (max-width: 599px) { .coll__ctl-lbl { display: none; } }
+
+  /* Density switcher. Each button draws n bars, so the control shows the
+     layout it produces rather than needing a label. */
+  .viewas { display: none; align-items: center; gap: 0.75rem; }
+  @media (min-width: 1024px) { .viewas { display: flex; } }
+  .viewas__lbl {
+    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    color: var(--color-plum);
+  }
+  .viewas__b {
+    display: grid; place-items: center; width: 30px; height: 26px; cursor: pointer;
+    border: 1px solid transparent; transition: border-color 0.25s ease;
+  }
+  .viewas__b:hover { border-color: rgb(74 36 41 / 0.2); }
+  .viewas__b[aria-pressed="true"] { border-color: rgb(74 36 41 / 0.35); }
+  .viewas__b:focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+  .viewas__bars { display: flex; gap: 2px; height: 13px; }
+  .viewas__bars i { display: block; width: 3px; background: rgb(74 36 41 / 0.35); transition: background 0.25s ease; }
+  .viewas__b[aria-pressed="true"] .viewas__bars i { background: var(--color-plum); }
+  .viewas__b:first-child .viewas__bars { flex-direction: column; gap: 3px; width: 17px; }
+  .viewas__b:first-child .viewas__bars i { width: 100%; height: 3px; }
 
   /* Rail */
   .coll__rail { min-width: 0; }
@@ -329,7 +412,10 @@
 {
   "name": "Collection",
   "settings": [
-    { "type": "range", "id": "per_page", "label": "Products per page", "min": 12, "max": 48, "step": 4, "default": 24 },
+    { "type": "range", "id": "per_page", "label": "Products per page", "min": 8, "max": 48, "step": 4, "default": 16 },
+    { "type": "text", "id": "per_page_options", "label": "Items-per-page choices", "info": "Each needs a matching templates/collection.N.json", "default": "16, 24, 48" },
+    { "type": "checkbox", "id": "show_per_page", "label": "Show items per page", "default": true },
+    { "type": "checkbox", "id": "show_density", "label": "Show view-as switcher", "default": true },
     { "type": "checkbox", "id": "show_sort", "label": "Show sort dropdown", "default": true }
   ]
 }

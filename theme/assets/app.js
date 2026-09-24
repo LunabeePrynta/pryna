@@ -236,6 +236,19 @@
       });
     }
 
+    /* Items per page rides on ?view=, since Liquid cannot read query params.
+       Rewriting the current URL keeps any active facets and sort intact; page
+       is dropped because the old page number rarely survives a resize. */
+    var perPage = document.querySelector('[data-per-page]');
+    if (perPage) {
+      perPage.addEventListener('change', function () {
+        var url = new URL(window.location.href);
+        url.searchParams.set('view', perPage.value);
+        url.searchParams.delete('page');
+        window.location.href = url.toString();
+      });
+    }
+
     /* Two overlapping range inputs behave as one dual-handle slider: each
        handle is clamped to the other so they cannot cross, and the filled
        span between them is drawn from their current values. */
@@ -304,11 +317,43 @@
     });
   }
 
+  /* ── Collection density: how many cards sit per row ── */
+  function initDensity() {
+    var group = document.querySelector('[data-cols-group]');
+    var grid = document.querySelector('[data-grid]');
+    if (!group || !grid) return;
+
+    var KEY = 'lyra:cols';
+    var buttons = group.querySelectorAll('[data-cols]');
+
+    function apply(n) {
+      grid.setAttribute('data-cols', n);
+      buttons.forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b.getAttribute('data-cols') === String(n)));
+      });
+    }
+
+    /* The stored preference is a convenience, not state worth guarding: a
+       private window or blocked storage just falls back to the default. */
+    var saved = null;
+    try { saved = localStorage.getItem(KEY); } catch (err) {}
+    apply(saved && /^[1-5]$/.test(saved) ? saved : '4');
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var n = b.getAttribute('data-cols');
+        apply(n);
+        try { localStorage.setItem(KEY, n); } catch (err) {}
+      });
+    });
+  }
+
   function init() {
     initHeader();
     initMenu();
     initCarousels();
     initFilters();
+    initDensity();
     initReveals();
   }
 
