@@ -46,11 +46,10 @@
       {%- endunless -%}
     </div>
     {%- comment -%}
-      Title and price share a baseline with the price pinned right. The title
-      is allowed to wrap; the price is shrink-0 so a long name pushes the row
-      taller rather than squeezing the figure.
-    {%- endcomment -%}
-    {%- comment -%}
+      Title and price share a baseline with the price pinned right, and the
+      price is shrink-0 so a long name pushes the row taller rather than
+      squeezing the figure.
+
       Everything below is rendered at every density. The pieces the grid has
       no room for carry `hidden` and are revealed only by the one-per-row
       rules in main-collection, which are unlayered and so outrank it.
