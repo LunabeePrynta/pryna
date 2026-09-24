@@ -5,13 +5,13 @@
     <div class="grid gap-10 md:grid-cols-3 md:gap-12" data-anim="stagger">
       {%- for block in section.blocks -%}
         <figure class="flex flex-col" {{ block.shopify_attributes }}>
-          <div class="text-amber text-[14px] tracking-[0.2em]" aria-label="{{ block.settings.rating }} out of 5">
+          <div class="text-amber text-ui tracking-[0.2em]" aria-label="{{ block.settings.rating }} out of 5">
             {%- for i in (1..block.settings.rating) -%}&#9733;{%- endfor -%}
           </div>
           <blockquote class="mt-4 text-[15px] font-light leading-relaxed text-ink">
             {{ block.settings.quote }}
           </blockquote>
-          <figcaption class="mt-5 text-[14px] tracking-widest2 uppercase text-plum">
+          <figcaption class="mt-5 text-ui tracking-widest2 uppercase text-plum">
             {{ block.settings.author }}
           </figcaption>
         </figure>

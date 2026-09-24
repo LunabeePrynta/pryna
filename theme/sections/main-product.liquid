@@ -26,7 +26,7 @@
           <div class="space-y-6">
             {%- for option in product.options_with_values -%}
               <div>
-                <p class="text-[14px] tracking-widest2 uppercase text-plum mb-3">{{ option.name }}</p>
+                <p class="text-ui tracking-widest2 uppercase text-plum mb-3">{{ option.name }}</p>
                 <div class="flex flex-wrap gap-2">
                   {%- for value in option.values -%}
                     <label class="opt">
@@ -78,7 +78,7 @@
     display: inline-block;
     padding: 0.6rem 1.05rem;
     border: 1px solid rgb(74 36 41 / 0.25);
-    font-size: 14px;
+    font-size: var(--text-ui);
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: all 0.3s ease;

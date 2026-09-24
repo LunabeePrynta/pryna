@@ -28,7 +28,12 @@
   --font-serif: "Cormorant Garamond", Georgia, serif;
   --font-sans: "Jost", system-ui, sans-serif;
 
-  --tracking-widest2: 0.24em;
+  /* The interface size: nav, labels, captions, meta, buttons. It has moved
+     twice now, so it is a token rather than an arbitrary value repeated across
+     eighteen templates. */
+  --text-ui: 13px;
+
+  --tracking-widest2: 3px;
   --tracking-mega: 0.42em;
 
   --container-site: 1440px;
@@ -85,7 +90,7 @@
   /* Small caps label: "01 — SHOP BY AGE" */
   .eyebrow {
     font-family: var(--font-sans);
-    font-size: 0.875rem;
+    font-size: var(--text-ui);
     font-weight: 400;
     letter-spacing: var(--tracking-widest2);
     text-transform: uppercase;
@@ -110,7 +115,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1rem 1.75rem;
-    font-size: 0.875rem;
+    font-size: var(--text-ui);
     letter-spacing: var(--tracking-widest2);
     text-transform: uppercase;
     transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
@@ -135,7 +140,7 @@
     place-items: center;
     background: var(--color-sand);
     color: var(--color-plum);
-    font-size: 0.875rem;
+    font-size: var(--text-ui);
     letter-spacing: var(--tracking-widest2);
     text-transform: uppercase;
   }

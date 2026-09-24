@@ -1,8 +1,10 @@
 {
   "current": {
+    "logo": "shopify://shop_images/lyra-png.png",
     "logo_word": "Lyra",
     "logo_sub": "Kids",
-    "logo_width": 120,
+    "logo_width": 70,
+    "favicon": "shopify://shop_images/lyra-png.png",
     "color_paper": "#FAF5EC",
     "color_ink": "#2E1A1D",
     "color_plum": "#4A2429",

@@ -208,7 +208,7 @@
   .coll__empty { padding-block: 3rem; font-size: 15px; color: var(--color-ink); }
   .coll__pages {
     margin-top: 3.5rem; display: flex; justify-content: center; align-items: center; gap: 1.25rem;
-    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase;
   }
   .coll__pageno { color: var(--color-plum); }
 
@@ -221,18 +221,18 @@
   .coll__bar-side { display: flex; align-items: center; gap: 1.5rem; }
   .coll__toggle {
     display: inline-flex; align-items: center; gap: 0.6rem; cursor: pointer;
-    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase;
     color: var(--color-plum);
   }
   @media (min-width: 1024px) { .coll__toggle { display: none; } }
 
   .coll__ctl { display: inline-flex; align-items: center; gap: 0.6rem; }
   .coll__ctl-lbl {
-    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase;
     color: var(--color-plum); white-space: nowrap;
   }
   .coll__ctl select {
-    font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase;
+    font-size: var(--text-ui); letter-spacing: 0.06em; text-transform: uppercase;
     color: var(--color-plum); background: transparent; border: 0;
     padding: 0.3rem 1.4rem 0.3rem 0; cursor: pointer;
     appearance: none;
@@ -250,7 +250,7 @@
   .viewas { display: none; align-items: center; gap: 0.75rem; }
   @media (min-width: 1024px) { .viewas { display: flex; } }
   .viewas__lbl {
-    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase;
     color: var(--color-plum);
   }
   .viewas__b {
@@ -281,7 +281,7 @@
   .rail__top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
   .rail__title {
     display: inline-flex; align-items: center; gap: 0.7rem;
-    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase;
     color: var(--color-plum);
   }
   .rail__close { font-size: 26px; line-height: 1; color: var(--color-plum); cursor: pointer; }
@@ -290,11 +290,11 @@
     display: flex; align-items: center; justify-content: center; gap: 0.55rem; width: 100%;
     background: var(--color-plum); color: var(--color-cream);
     padding: 0.85rem 1rem; margin-bottom: 0.5rem;
-    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase;
     transition: background 0.35s ease;
   }
   .rail__clear:hover { background: var(--color-amber); }
-  .rail__note { font-size: 14px; line-height: 1.6; color: var(--color-ink); padding-block: 0.5rem; }
+  .rail__note { font-size: var(--text-ui); line-height: 1.6; color: var(--color-ink); padding-block: 0.5rem; }
   .rail__go { width: 100%; justify-content: center; margin-top: 1rem; }
 
   /* Facet group */
@@ -302,20 +302,20 @@
   .fg__head {
     display: flex; align-items: center; gap: 0.7rem; cursor: pointer; list-style: none;
     padding-block: 1.1rem;
-    font-size: 14px; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase;
     color: var(--color-plum);
   }
   .fg__head::-webkit-details-marker { display: none; }
   .fg__title { flex: 1 1 auto; }
   .fg__chev { display: inline-flex; transition: transform 0.3s ease; }
   .fg[open] .fg__chev { transform: rotate(180deg); }
-  .fg__reset { font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-amber); }
+  .fg__reset { font-size: var(--text-ui); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-amber); }
   .fg__reset:hover { text-decoration: underline; }
   .fg__body { padding-bottom: 1.5rem; }
 
   /* Checkbox list */
   .cks { display: flex; flex-direction: column; gap: 0.7rem; }
-  .ck { display: flex; align-items: center; gap: 0.7rem; cursor: pointer; font-size: 14px; }
+  .ck { display: flex; align-items: center; gap: 0.7rem; cursor: pointer; font-size: var(--text-ui); }
   .ck input { position: absolute; opacity: 0; width: 0; height: 0; }
   .ck__box {
     width: 17px; height: 17px; flex: 0 0 auto;
@@ -337,7 +337,7 @@
   .chip span {
     display: block; text-align: center; padding: 0.7rem 0.4rem;
     border: 1px solid rgb(74 36 41 / 0.25);
-    font-size: 14px; letter-spacing: 0.06em; color: var(--color-plum);
+    font-size: var(--text-ui); letter-spacing: 0.06em; color: var(--color-plum);
     transition: all 0.25s ease;
   }
   .chip input:checked + span { background: var(--color-plum); border-color: var(--color-plum); color: var(--color-cream); }
@@ -391,7 +391,7 @@
   .pr__field input {
     width: 100%; text-align: center; padding: 0.6rem 0.4rem;
     border: 1px solid rgb(74 36 41 / 0.25); background: transparent;
-    font-size: 14px; color: var(--color-plum);
+    font-size: var(--text-ui); color: var(--color-plum);
   }
   .pr__field input:focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px; }
   .pr__dash { color: var(--color-plum); }

@@ -22,17 +22,17 @@
             >
             <button
               type="submit"
-              class="shrink-0 text-[14px] tracking-widest2 uppercase text-gold hover:text-cream transition-colors py-4"
+              class="shrink-0 text-ui tracking-widest2 uppercase text-gold hover:text-cream transition-colors py-4"
             >
               {{ 'general.newsletter.submit' | t }}
             </button>
           </div>
 
           {%- if form.posted_successfully? -%}
-            <p class="mt-3 text-[14px] text-gold">{{ 'general.newsletter.success' | t }}</p>
+            <p class="mt-3 text-ui text-gold">{{ 'general.newsletter.success' | t }}</p>
           {%- endif -%}
           {%- if form.errors -%}
-            <p class="mt-3 text-[14px] text-gold">{{ form.errors.messages['email'] }}</p>
+            <p class="mt-3 text-ui text-gold">{{ form.errors.messages['email'] }}</p>
           {%- endif -%}
         {%- endform -%}
       </div>
