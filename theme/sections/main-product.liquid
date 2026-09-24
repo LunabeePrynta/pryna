@@ -1,94 +1,481 @@
-<section class="py-10 md:py-16">
-  <div class="wrap grid gap-10 lg:grid-cols-2 lg:gap-16 items-start">
+{%- liquid
+  assign current = product.selected_or_first_available_variant
+  assign featured = current.featured_media | default: product.featured_media
+  assign rating = product.metafields.reviews.rating.value
+  assign rating_count = product.metafields.reviews.rating_count.value | default: 0
+  assign s = section.settings
+-%}
 
-    <div class="grid gap-3">
-      {%- if product.media.size > 0 -%}
-        {%- for media in product.media limit: 6 -%}
-          <div data-anim="reveal">
-            {% render 'media', image: media.preview_image, ratio: '3/4', tone: 'sand', eager: forloop.first, sizes: '(min-width: 1024px) 50vw, 100vw' %}
-          </div>
-        {%- endfor -%}
-      {%- else -%}
-        {% render 'media', label: product.title, ratio: '3/4', tone: 'sand', eager: true %}
-      {%- endif -%}
-    </div>
+<section class="pdp" data-pdp data-section="{{ section.id }}">
+  <div class="wrap pdp__grid">
 
-    <div class="lg:sticky lg:top-28">
-      {%- if product.type != blank -%}
-        <p class="eyebrow mb-4">{{ product.type }}</p>
-      {%- endif -%}
-
-      <h1 class="product-name text-plum text-[38px] md:text-[52px] leading-[1.03]">{{ product.title }}</h1>
-      {% render 'price', product: product, class: 'mt-4 block text-[18px] text-plum' %}
-
-      {%- form 'product', product, class: 'mt-8' -%}
-        {%- unless product.has_only_default_variant -%}
-          <div class="space-y-6">
-            {%- for option in product.options_with_values -%}
-              <div>
-                <p class="text-ui tracking-widest2 uppercase text-plum mb-3">{{ option.name }}</p>
-                <div class="flex flex-wrap gap-2">
-                  {%- for value in option.values -%}
-                    <label class="opt">
-                      <input
-                        type="radio"
-                        name="option-{{ option.position }}"
-                        value="{{ value | escape }}"
-                        {% if option.selected_value == value %}checked{% endif %}
-                        class="sr-only"
-                      >
-                      <span>{{ value }}</span>
-                    </label>
-                  {%- endfor -%}
-                </div>
-              </div>
-            {%- endfor -%}
-          </div>
-        {%- endunless -%}
-
-        <select name="id" class="sr-only" aria-hidden="true" tabindex="-1">
-          {%- for variant in product.variants -%}
-            <option value="{{ variant.id }}" {% if variant == product.selected_or_first_available_variant %}selected{% endif %}>
-              {{ variant.title }}
-            </option>
+    {%- comment -%} ── Gallery ── {%- endcomment -%}
+    <div class="pdp__gallery">
+      <div class="pdp__stage">
+        {%- if product.media.size > 0 -%}
+          {%- for media in product.media -%}
+            <div
+              class="pdp__slide{% if media.id == featured.id %} is-active{% endif %}"
+              data-media-id="{{ media.id }}"
+            >
+              {% render 'media', image: media.preview_image, ratio: '4/5', eager: forloop.first, sizes: '(min-width: 1024px) 50vw, 100vw' %}
+            </div>
           {%- endfor -%}
-        </select>
+        {%- else -%}
+          <div class="pdp__slide is-active">
+            {% render 'media', label: product.title, ratio: '4/5', eager: true %}
+          </div>
+        {%- endif -%}
 
-        <button
-          type="submit"
-          name="add"
-          class="btn btn-solid w-full justify-center mt-8"
-          {% unless product.available %}disabled{% endunless %}
-        >
-          {%- if product.available -%}{{ 'products.product.add_to_cart' | t }}{%- else -%}{{ 'products.product.sold_out' | t }}{%- endif -%}
-        </button>
-      {%- endform -%}
+        <span class="pdp__badge" data-badge {% unless current.compare_at_price > current.price %}hidden{% endunless %}>
+          {%- if current.compare_at_price > current.price -%}
+            -{{ current.compare_at_price | minus: current.price | times: 100 | divided_by: current.compare_at_price | floor }}%
+          {%- endif -%}
+        </span>
+      </div>
 
-      {%- if product.description != blank -%}
-        <div class="prose-lyra mt-10 text-[15px] font-light leading-relaxed text-ink">
-          {{ product.description }}
+      {%- if product.media.size > 1 -%}
+        <div class="pdp__thumbs" role="tablist" aria-label="Product images">
+          {%- for media in product.media -%}
+            <button
+              type="button"
+              class="pdp__thumb{% if media.id == featured.id %} is-active{% endif %}"
+              data-thumb="{{ media.id }}"
+              aria-label="Show image {{ forloop.index }}"
+            >
+              <img
+                src="{{ media.preview_image | image_url: width: 240 }}"
+                alt=""
+                width="120"
+                height="150"
+                loading="lazy"
+              >
+            </button>
+          {%- endfor -%}
         </div>
       {%- endif -%}
     </div>
+
+    {%- comment -%} ── Buy box ── {%- endcomment -%}
+    <div class="pdp__info">
+      <h1 class="product-name pdp__title">{{ product.title }}</h1>
+
+      <div class="pdp__rating">
+        {%- assign stars = rating.rating | default: 0 | round -%}
+        <span class="pdp__stars" aria-hidden="true">
+          {%- for i in (1..5) -%}
+            <svg viewBox="0 0 20 20" class="{% if i <= stars %}is-on{% endif %}"><path d="M10 1.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L10 14.9l-5.2 2.8 1-5.9L1.5 7.7l5.9-.8z"/></svg>
+          {%- endfor -%}
+        </span>
+        <span class="pdp__rating-text">
+          {%- if rating_count > 0 -%}
+            {{ rating_count }} {{ rating_count | pluralize: 'review', 'reviews' }}
+          {%- else -%}
+            No reviews
+          {%- endif -%}
+        </span>
+      </div>
+
+      <div class="pdp__price">
+        <span class="pdp__price-now" data-price>{{ current.price | money }}</span>
+        <s class="pdp__price-was" data-compare {% unless current.compare_at_price > current.price %}hidden{% endunless %}>
+          {{- current.compare_at_price | money -}}
+        </s>
+      </div>
+      {%- if s.price_note != blank -%}
+        <p class="pdp__note">{{ s.price_note }}</p>
+      {%- endif -%}
+
+      <p class="pdp__stock" data-stock>
+        {%- if current.available -%}
+          <span class="pdp__dot"></span>
+          {%- if current.inventory_management == 'shopify' and current.inventory_policy == 'deny' and current.inventory_quantity > 0 -%}
+            {{ current.inventory_quantity }} in stock
+          {%- else -%}
+            In stock
+          {%- endif -%}
+        {%- else -%}
+          <span class="pdp__dot is-out"></span> Sold out
+        {%- endif -%}
+      </p>
+
+      <hr class="pdp__rule">
+
+      {%- assign blurb = product.metafields.custom.short_description.value | default: product.description | strip_html | truncatewords: s.excerpt_words -%}
+      {%- if blurb != blank -%}
+        <p class="pdp__excerpt">{{ blurb }}</p>
+      {%- endif -%}
+
+      {%- form 'product', product, class: 'pdp__form', data-product-form: '', novalidate: 'novalidate' -%}
+        {%- unless product.has_only_default_variant -%}
+          {%- for option in product.options_with_values -%}
+            {%- liquid
+              assign oname = option.name | downcase
+              assign is_color = false
+              if oname contains 'colo'
+                assign is_color = true
+              endif
+            -%}
+            <fieldset class="pdp__opt" data-option="{{ forloop.index0 }}">
+              <legend class="pdp__opt-label">
+                {{ option.name }}: <span data-opt-value>{{ option.selected_value }}</span>
+              </legend>
+              <div class="pdp__opt-values{% if is_color %} is-swatch{% endif %}">
+                {%- for value in option.values -%}
+                  <label class="{% if is_color %}pdp__swatch{% else %}pdp__chip{% endif %}" title="{{ value | escape }}">
+                    <input
+                      type="radio"
+                      name="option-{{ option.position }}"
+                      value="{{ value | escape }}"
+                      {% if option.selected_value == value %}checked{% endif %}
+                      class="sr-only"
+                    >
+                    {%- if is_color -%}
+                      {%- liquid
+                        assign css_names = ',black,white,red,pink,hotpink,maroon,orange,coral,peach,yellow,gold,mustard,beige,ivory,cream,khaki,olive,green,mint,teal,turquoise,aqua,blue,navy,skyblue,lavender,lilac,purple,violet,plum,magenta,fuchsia,brown,tan,chocolate,grey,gray,silver,salmon,crimson,wheat,linen,'
+                        assign swatch_key = value | handle | replace: '-', ''
+                        assign swatch_probe = ',' | append: swatch_key | append: ','
+                        assign swatch_bg = 'var(--color-sand)'
+                        if css_names contains swatch_probe
+                          assign swatch_bg = swatch_key | replace: 'cream', '#FDF3CD' | replace: 'mustard', '#D9A62E' | replace: 'peach', '#F6C6A8' | replace: 'mint', '#BFE3CF' | replace: 'lilac', '#C8A2C8'
+                        endif
+                        if value.swatch.image
+                          assign swatch_bg = value.swatch.image | image_url: width: 80 | prepend: 'url(' | append: ') center/cover'
+                        elsif value.swatch.color
+                          assign swatch_bg = value.swatch.color
+                        endif
+                      -%}
+                      <span style="--sw: {{ swatch_bg }};"><span class="sr-only">{{ value }}</span></span>
+                    {%- else -%}
+                      <span>{{ value }}</span>
+                    {%- endif -%}
+                  </label>
+                {%- endfor -%}
+              </div>
+            </fieldset>
+          {%- endfor -%}
+        {%- endunless -%}
+
+        <select name="id" class="sr-only" aria-hidden="true" tabindex="-1" data-variant-select>
+          {%- for variant in product.variants -%}
+            <option value="{{ variant.id }}" {% if variant == current %}selected{% endif %}>{{ variant.title }}</option>
+          {%- endfor -%}
+        </select>
+
+        <div class="pdp__buy">
+          <div class="pdp__qty">
+            <button type="button" data-qty="-1" aria-label="Decrease quantity">&minus;</button>
+            <input type="number" name="quantity" value="1" min="1" inputmode="numeric" aria-label="Quantity">
+            <button type="button" data-qty="1" aria-label="Increase quantity">+</button>
+          </div>
+          <button type="submit" name="add" class="pdp__add" data-add {% unless current.available %}disabled{% endunless %}>
+            {%- if current.available -%}{{ 'products.product.add_to_cart' | t }}{%- else -%}{{ 'products.product.sold_out' | t }}{%- endif -%}
+          </button>
+          {%- if s.show_dynamic_checkout -%}
+            <div class="pdp__checkout">{{ form | payment_button }}</div>
+          {%- endif -%}
+        </div>
+      {%- endform -%}
+
+      {%- comment -%} ── Utility links ── {%- endcomment -%}
+      <div class="pdp__utils">
+        {%- if s.size_guide_page != blank -%}
+          <button type="button" data-dialog-open="size-{{ section.id }}">
+            <svg viewBox="0 0 24 24"><path d="M3 8h18v8H3z M7 8v3 M11 8v4 M15 8v3 M19 8v4"/></svg>
+            Size guide
+          </button>
+        {%- endif -%}
+        {%- if s.show_ask -%}
+          <button type="button" data-dialog-open="ask-{{ section.id }}">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7 M12 17h.01"/></svg>
+            Ask a question
+          </button>
+        {%- endif -%}
+        <button type="button" data-share data-url="{{ shop.url }}{{ product.url }}" data-title="{{ product.title | escape }}">
+          <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4 M8.2 13.2l7.6 4.4"/></svg>
+          <span data-share-label>Share</span>
+        </button>
+      </div>
+
+      {%- comment -%} ── Meta rows ── {%- endcomment -%}
+      <dl class="pdp__meta">
+        {%- if s.delivery_text != blank -%}
+          <div><dt>Estimated delivery:</dt><dd>{{ s.delivery_text }}</dd></div>
+        {%- endif -%}
+        {%- if s.returns_text != blank -%}
+          <div><dt>Free shipping &amp; returns:</dt><dd>{{ s.returns_text }}</dd></div>
+        {%- endif -%}
+        <div {% if current.sku == blank %}hidden{% endif %} data-sku-row><dt>SKU:</dt><dd data-sku>{{ current.sku }}</dd></div>
+        {%- if product.type != blank -%}
+          <div><dt>Category:</dt><dd>{{ product.type }}</dd></div>
+        {%- endif -%}
+      </dl>
+
+      {%- if s.show_payment -%}
+        <div class="pdp__pay">
+          <p class="pdp__pay-title">Payment &amp; Security</p>
+          {%- if shop.enabled_payment_types.size > 0 -%}
+            <div class="pdp__pay-icons">
+              {%- for type in shop.enabled_payment_types -%}{{ type | payment_type_svg_tag }}{%- endfor -%}
+            </div>
+          {%- endif -%}
+          {%- if s.payment_text != blank -%}
+            <p class="pdp__pay-text">{{ s.payment_text }}</p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {%- if section.blocks.size > 0 -%}
+        <ul class="pdp__trust">
+          {%- for block in section.blocks -%}
+            <li {{ block.shopify_attributes }}>
+              {% render 'pdp-icon', name: block.settings.icon %}
+              <span>{{ block.settings.label }}</span>
+            </li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </div>
   </div>
+
+  {%- comment -%} ── Dialogs ── {%- endcomment -%}
+  {%- if s.size_guide_page != blank -%}
+    <dialog class="pdp__dialog" id="size-{{ section.id }}">
+      <div class="pdp__dialog-head">
+        <p>{{ s.size_guide_page.title }}</p>
+        <button type="button" data-dialog-close aria-label="Close">&times;</button>
+      </div>
+      <div class="pdp__dialog-body prose-lyra">{{ s.size_guide_page.content }}</div>
+    </dialog>
+  {%- endif -%}
+
+  {%- if s.show_ask -%}
+    <dialog class="pdp__dialog" id="ask-{{ section.id }}">
+      <div class="pdp__dialog-head">
+        <p>Ask a question</p>
+        <button type="button" data-dialog-close aria-label="Close">&times;</button>
+      </div>
+      <div class="pdp__dialog-body">
+        {%- assign ask_id = 'ask-form-' | append: section.id -%}
+        {%- form 'contact', id: ask_id -%}
+          {%- if form.posted_successfully? or form.errors -%}<span hidden data-dialog-autoopen></span>{%- endif -%}
+          {%- if form.posted_successfully? -%}
+            <p class="pdp__ok">Thank you — we'll reply to you shortly.</p>
+          {%- else -%}
+            {%- if form.errors -%}<p class="pdp__err">{{ form.errors | default_errors }}</p>{%- endif -%}
+            <input type="hidden" name="contact[product]" value="{{ product.title | escape }} — {{ shop.url }}{{ product.url }}">
+            <label>Name<input type="text" name="contact[name]" autocomplete="name" required></label>
+            <label>Email<input type="email" name="contact[email]" autocomplete="email" required></label>
+            <label>Phone<input type="tel" name="contact[phone]" autocomplete="tel"></label>
+            <label>Message<textarea name="contact[body]" rows="4" required></textarea></label>
+            <button type="submit" class="pdp__add">Send</button>
+          {%- endif -%}
+        {%- endform -%}
+      </div>
+    </dialog>
+  {%- endif -%}
+
+  <script type="application/json" data-product-json>
+    {
+      "money": {{ shop.money_format | json }},
+      "variants": [
+        {%- for v in product.variants -%}
+          {
+            "id": {{ v.id }},
+            "options": {{ v.options | json }},
+            "available": {{ v.available | json }},
+            "price": {{ v.price }},
+            "compare": {{ v.compare_at_price | default: 0 }},
+            "sku": {{ v.sku | json }},
+            "qty": {% if v.inventory_management == 'shopify' and v.inventory_policy == 'deny' %}{{ v.inventory_quantity | default: 0 }}{% else %}null{% endif %},
+            "media": {% if v.featured_media %}{{ v.featured_media.id }}{% else %}null{% endif %}
+          }{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      ],
+      "labels": {
+        "add": {{ 'products.product.add_to_cart' | t | json }},
+        "soldOut": {{ 'products.product.sold_out' | t | json }},
+        "unavailable": "Unavailable"
+      }
+    }
+  </script>
 </section>
 
+<script src="{{ 'product.js' | asset_url }}" defer></script>
+
 {% stylesheet %}
-  .opt span {
-    display: inline-block;
-    padding: 0.6rem 1.05rem;
-    border: 1px solid rgb(74 36 41 / 0.25);
-    font-size: var(--text-ui);
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    transition: all 0.3s ease;
+  .pdp { padding-block: 2.5rem 4rem; }
+  .pdp__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; align-items: start; }
+  @media (min-width: 1024px) {
+    .pdp { padding-block: 3.5rem 5rem; }
+    .pdp__grid { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 4.5rem; }
+    .pdp__gallery { position: sticky; top: 7rem; }
   }
-  .opt input:checked + span { background: var(--color-plum); border-color: var(--color-plum); color: var(--color-cream); }
-  .opt input:focus-visible + span { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+
+  /* Gallery ---- */
+  .pdp__stage { position: relative; background: var(--color-sand); }
+  .pdp__slide { display: none; }
+  .pdp__slide.is-active { display: block; animation: pdp-fade .45s ease; }
+  @keyframes pdp-fade { from { opacity: 0; } to { opacity: 1; } }
+  .pdp__badge {
+    position: absolute; top: 1rem; left: 1rem;
+    background: var(--color-amber); color: var(--color-cream);
+    font-size: 12px; font-weight: 500; letter-spacing: .06em;
+    padding: .35rem .65rem; border-radius: 999px;
+  }
+  .pdp__badge[hidden] { display: none; }
+  .pdp__thumbs { display: flex; gap: .75rem; margin-top: .9rem; overflow-x: auto; scrollbar-width: none; }
+  .pdp__thumbs::-webkit-scrollbar { display: none; }
+  .pdp__thumb {
+    flex: 0 0 5.5rem; aspect-ratio: 4/5; padding: 0; background: var(--color-sand);
+    border: 1px solid transparent; opacity: .6; transition: opacity .3s, border-color .3s; cursor: pointer;
+  }
+  .pdp__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pdp__thumb:hover, .pdp__thumb.is-active { opacity: 1; border-color: var(--color-plum); }
+
+  /* Buy box ---- */
+  .pdp__title { font-size: 28px; line-height: 1.2; font-weight: 500; color: var(--color-plum); }
+  @media (min-width: 768px) { .pdp__title { font-size: 32px; } }
+  .pdp__rating { display: flex; align-items: center; gap: .6rem; margin-top: .75rem; font-size: 13px; color: var(--color-ink); }
+  .pdp__stars { display: inline-flex; gap: 2px; }
+  .pdp__stars svg { width: 15px; height: 15px; fill: none; stroke: var(--color-gold); stroke-width: 1.3; }
+  .pdp__stars svg.is-on { fill: var(--color-gold); }
+  .pdp__price { display: flex; align-items: baseline; gap: .75rem; margin-top: 1.25rem; }
+  .pdp__price-now { font-size: 26px; font-weight: 500; color: var(--color-plum); }
+  .pdp__price-was { font-size: 18px; color: var(--color-ink); opacity: .55; }
+  .pdp__price-was[hidden] { display: none; }
+  .pdp__note { margin-top: .35rem; font-size: 13px; color: var(--color-ink); opacity: .7; }
+  .pdp__stock { display: flex; align-items: center; gap: .5rem; margin-top: .9rem; font-size: 14px; color: #2f7d4a; }
+  .pdp__dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px rgb(47 125 74 / .18); }
+  .pdp__stock:has(.is-out) { color: #a23a2c; }
+  .pdp__dot.is-out { box-shadow: 0 0 0 3px rgb(162 58 44 / .18); }
+  .pdp__rule { border: 0; border-top: 1px solid rgb(74 36 41 / .14); margin-block: 1.5rem; }
+  .pdp__excerpt { font-size: 15px; line-height: 1.7; color: var(--color-ink); }
+
+  .pdp__form { margin-top: 1.75rem; display: grid; gap: 1.5rem; }
+  .pdp__opt { border: 0; padding: 0; margin: 0; }
+  .pdp__opt-label { font-size: 14px; font-weight: 500; color: var(--color-plum); margin-bottom: .75rem; padding: 0; }
+  .pdp__opt-label span { font-weight: 400; color: var(--color-ink); }
+  .pdp__opt-values { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .pdp__chip span {
+    display: inline-grid; place-items: center; min-width: 3rem; height: 2.75rem; padding-inline: 1rem;
+    border: 1px solid rgb(74 36 41 / .25); font-size: 14px; color: var(--color-plum);
+    cursor: pointer; transition: all .25s ease;
+  }
+  .pdp__chip:hover span { border-color: var(--color-plum); }
+  .pdp__chip input:checked + span { background: var(--color-plum); border-color: var(--color-plum); color: var(--color-cream); }
+  .pdp__chip.is-na span { opacity: .4; text-decoration: line-through; }
+  .pdp__swatch > span {
+    display: block; width: 2.25rem; height: 2.25rem; border-radius: 50%;
+    background: var(--sw, var(--color-sand)); border: 1px solid rgb(74 36 41 / .18);
+    box-shadow: 0 0 0 3px var(--color-paper); cursor: pointer; transition: box-shadow .25s ease;
+  }
+  .pdp__swatch input:checked + span { box-shadow: 0 0 0 3px var(--color-paper), 0 0 0 4px var(--color-plum); }
+  .pdp__swatch.is-na > span { opacity: .4; }
+  .pdp__chip input:focus-visible + span,
+  .pdp__swatch input:focus-visible + span { outline: 2px solid var(--color-amber); outline-offset: 3px; }
+
+  .pdp__buy { display: grid; grid-template-columns: auto 1fr; gap: .75rem; margin-top: .5rem; }
+  .pdp__qty { display: flex; align-items: center; border: 1px solid rgb(74 36 41 / .25); height: 3.25rem; }
+  .pdp__qty button { width: 2.75rem; height: 100%; font-size: 18px; color: var(--color-plum); cursor: pointer; }
+  .pdp__qty input { width: 2.5rem; text-align: center; background: transparent; border: 0; font-size: 15px; color: var(--color-plum); -moz-appearance: textfield; }
+  .pdp__qty input::-webkit-outer-spin-button, .pdp__qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .pdp__add {
+    height: 3.25rem; padding-inline: 1.5rem; background: var(--color-plum); color: var(--color-cream);
+    font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    cursor: pointer; transition: background .3s ease;
+  }
+  .pdp__add:hover { background: var(--color-amber); }
+  .pdp__add:disabled { opacity: .5; cursor: not-allowed; background: var(--color-plum); }
+  .pdp__checkout { grid-column: 1 / -1; }
+  @media (min-width: 640px) {
+    .pdp__buy { grid-template-columns: auto 1fr 1fr; }
+    .pdp__checkout { grid-column: auto; }
+  }
+  .pdp__checkout .shopify-payment-button__button { height: 3.25rem; min-height: 3.25rem; border-radius: 0; font-family: var(--font-sans); font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase; }
+  .pdp__checkout .shopify-payment-button__button--unbranded { background: var(--color-ink); color: var(--color-cream); }
+  .pdp__checkout .shopify-payment-button__button--unbranded:hover:not([disabled]) { background: var(--color-amber); }
+  .pdp__checkout .shopify-payment-button__more-options { display: none; }
+
+  .pdp__utils { display: flex; flex-wrap: wrap; gap: .75rem 1.75rem; margin-top: 1.5rem; }
+  .pdp__utils button { display: inline-flex; align-items: center; gap: .5rem; font-size: 14px; color: var(--color-plum); cursor: pointer; }
+  .pdp__utils button:hover { color: var(--color-amber); }
+  .pdp__utils svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+
+  .pdp__meta { margin-top: 1.5rem; display: grid; gap: .5rem; font-size: 14px; }
+  .pdp__meta > div { display: flex; gap: .4rem; }
+  .pdp__meta > div[hidden] { display: none; }
+  .pdp__meta dt { font-weight: 500; color: var(--color-plum); }
+  .pdp__meta dd { color: var(--color-ink); }
+
+  .pdp__pay { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid rgb(74 36 41 / .14); }
+  .pdp__pay-title { font-size: 14px; font-weight: 500; color: var(--color-plum); }
+  .pdp__pay-icons { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .75rem; }
+  .pdp__pay-icons svg { width: 38px; height: 24px; }
+  .pdp__pay-text { margin-top: .75rem; font-size: 13px; line-height: 1.6; color: var(--color-ink); opacity: .75; }
+
+  .pdp__trust {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); margin-top: 1.75rem;
+    border: 1px solid rgb(74 36 41 / .14);
+  }
+  .pdp__trust li { display: flex; flex-direction: column; align-items: center; gap: .6rem; padding: 1.1rem .75rem; text-align: center; font-size: 13px; color: var(--color-plum); }
+  .pdp__trust li + li { border-left: 1px solid rgb(74 36 41 / .14); }
+  .pdp__trust svg { width: 26px; height: 26px; fill: none; stroke: var(--color-amber); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Dialogs ---- */
+  .pdp__dialog { width: min(40rem, calc(100vw - 2rem)); max-height: 85vh; padding: 0; border: 0; background: var(--color-paper); color: var(--color-ink); margin: auto; }
+  .pdp__dialog::backdrop { background: rgb(46 26 29 / .5); }
+  .pdp__dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 1.5rem; border-bottom: 1px solid rgb(74 36 41 / .14); }
+  .pdp__dialog-head p { font-size: 16px; font-weight: 500; color: var(--color-plum); }
+  .pdp__dialog-head button { font-size: 26px; line-height: 1; color: var(--color-plum); cursor: pointer; }
+  .pdp__dialog-body { padding: 1.5rem; overflow: auto; }
+  .pdp__dialog-body form { display: grid; gap: 1rem; }
+  .pdp__dialog-body label { display: grid; gap: .35rem; font-size: 13px; color: var(--color-plum); }
+  .pdp__dialog-body input, .pdp__dialog-body textarea { border: 1px solid rgb(74 36 41 / .25); background: transparent; padding: .7rem .8rem; font-size: 14px; color: var(--color-ink); }
+  .pdp__dialog-body table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .pdp__dialog-body th, .pdp__dialog-body td { border: 1px solid rgb(74 36 41 / .14); padding: .55rem .7rem; text-align: left; }
+  .pdp__ok { color: #2f7d4a; }
+  .pdp__err { color: #a23a2c; font-size: 13px; }
   .prose-lyra p { margin-block: 0.75em; }
   .prose-lyra ul { list-style: disc; padding-inline-start: 1.25rem; }
 {% endstylesheet %}
 
 {% schema %}
-{ "name": "Product", "settings": [] }
+{
+  "name": "Product",
+  "settings": [
+    { "type": "text", "id": "price_note", "label": "Note under price", "default": "Inclusive of all taxes. Shipping calculated at checkout." },
+    { "type": "range", "id": "excerpt_words", "label": "Short description length (words)", "min": 10, "max": 80, "step": 5, "default": 35, "info": "Uses the custom.short_description metafield if set, otherwise the start of the description." },
+    { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Buy it now button", "default": true },
+    { "type": "header", "content": "Links" },
+    { "type": "page", "id": "size_guide_page", "label": "Size guide page" },
+    { "type": "checkbox", "id": "show_ask", "label": "Show Ask a question", "default": true },
+    { "type": "header", "content": "Details" },
+    { "type": "text", "id": "delivery_text", "label": "Estimated delivery", "default": "3–7 business days" },
+    { "type": "text", "id": "returns_text", "label": "Shipping & returns", "default": "On all orders over ₹2,999" },
+    { "type": "checkbox", "id": "show_payment", "label": "Show payment & security", "default": true },
+    { "type": "textarea", "id": "payment_text", "label": "Payment & security text", "default": "Your payment information is processed securely. We do not store credit card details nor have access to your credit card information." }
+  ],
+  "blocks": [
+    {
+      "type": "trust",
+      "name": "Trust badge",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "select", "id": "icon", "label": "Icon", "default": "truck",
+          "options": [
+            { "value": "truck", "label": "Delivery" },
+            { "value": "return", "label": "Returns" },
+            { "value": "shield", "label": "Secure" },
+            { "value": "leaf", "label": "Natural fabric" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "support", "label": "Support" }
+          ]
+        },
+        { "type": "text", "id": "label", "label": "Label", "default": "Free delivery" }
+      ]
+    }
+  ]
+}
 {% endschema %}

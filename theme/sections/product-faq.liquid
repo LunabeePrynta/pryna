@@ -1,0 +1,72 @@
+<section class="pfaq">
+  <div class="wrap pfaq__grid">
+    <div class="pfaq__intro">
+      {%- if section.settings.eyebrow != blank -%}<p class="eyebrow mb-4">{{ section.settings.eyebrow }}</p>{%- endif -%}
+      <h2 class="pfaq__title">{{ section.settings.heading }}</h2>
+      {%- if section.settings.text != blank -%}<div class="pfaq__text">{{ section.settings.text }}</div>{%- endif -%}
+    </div>
+
+    <div class="pfaq__list">
+      {%- for block in section.blocks -%}
+        <details class="pfaq__item" name="faq-{{ section.id }}" {% if forloop.first and section.settings.open_first %}open{% endif %} {{ block.shopify_attributes }}>
+          <summary>
+            <span>{{ block.settings.question }}</span>
+            <i aria-hidden="true"></i>
+          </summary>
+          <div class="pfaq__answer">{{ block.settings.answer }}</div>
+        </details>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  .pfaq { padding-block: 4rem 5rem; background: var(--color-sand); }
+  .pfaq__grid { display: grid; gap: 2.5rem; }
+  @media (min-width: 1024px) { .pfaq__grid { grid-template-columns: minmax(0, .85fr) minmax(0, 1.4fr); gap: 5rem; } }
+  .pfaq__title { font-size: 36px; line-height: 1.1; color: var(--color-plum); }
+  @media (min-width: 768px) { .pfaq__title { font-size: 46px; } }
+  .pfaq__text { margin-top: 1.25rem; font-size: 15px; line-height: 1.7; color: var(--color-ink); max-width: 26rem; }
+  .pfaq__text a { text-decoration: underline; text-underline-offset: 3px; }
+  .pfaq__item { border-bottom: 1px solid rgb(74 36 41 / .16); }
+  .pfaq__item:first-child { border-top: 1px solid rgb(74 36 41 / .16); }
+  .pfaq__item summary {
+    display: flex; justify-content: space-between; align-items: center; gap: 1.5rem;
+    padding-block: 1.3rem; font-size: 16px; font-weight: 500; color: var(--color-plum); cursor: pointer; list-style: none;
+  }
+  .pfaq__item summary::-webkit-details-marker { display: none; }
+  .pfaq__item summary i { position: relative; flex: 0 0 auto; width: 14px; height: 14px; }
+  .pfaq__item summary i::before, .pfaq__item summary i::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: currentColor; transition: transform .3s ease; }
+  .pfaq__item summary i::after { transform: rotate(90deg); }
+  .pfaq__item[open] summary i::after { transform: rotate(0deg); }
+  .pfaq__answer { padding-bottom: 1.4rem; font-size: 15px; line-height: 1.7; color: var(--color-ink); max-width: 44rem; }
+  .pfaq__answer p + p { margin-top: .75em; }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "FAQ",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Good to know" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Frequently asked questions" },
+    { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Can't find what you're looking for? Write to our care team and we'll help you choose.</p>" },
+    { "type": "checkbox", "id": "open_first", "label": "Open first question", "default": true }
+  ],
+  "blocks": [
+    {
+      "type": "question",
+      "name": "Question",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question", "default": "How do I choose the right size?" },
+        { "type": "richtext", "id": "answer", "label": "Answer", "default": "<p>Our pieces follow standard age sizing. If your child is between sizes, we recommend sizing up.</p>" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "FAQ",
+      "blocks": [{ "type": "question" }, { "type": "question" }, { "type": "question" }]
+    }
+  ]
+}
+{% endschema %}

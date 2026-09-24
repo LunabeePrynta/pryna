@@ -1,6 +1,58 @@
 {
   "sections": {
-    "main": { "type": "main-product", "settings": {} }
+    "main": {
+      "type": "main-product",
+      "blocks": {
+        "trust_ship": { "type": "trust", "settings": { "icon": "truck", "label": "Free delivery over ₹2,999" } },
+        "trust_return": { "type": "trust", "settings": { "icon": "return", "label": "7-day easy returns" } },
+        "trust_cotton": { "type": "trust", "settings": { "icon": "leaf", "label": "Soft, breathable fabrics" } }
+      },
+      "block_order": ["trust_ship", "trust_return", "trust_cotton"],
+      "settings": {}
+    },
+    "details": {
+      "type": "product-details",
+      "settings": { "show_reviews": true }
+    },
+    "faq": {
+      "type": "product-faq",
+      "blocks": {
+        "q1": {
+          "type": "question",
+          "settings": {
+            "question": "How do I choose the right size?",
+            "answer": "<p>Our pieces follow standard age sizing. If your child is between sizes, we recommend sizing up — most styles have room to grow.</p>"
+          }
+        },
+        "q2": {
+          "type": "question",
+          "settings": {
+            "question": "How long does delivery take?",
+            "answer": "<p>Orders are dispatched within 1–2 business days and usually arrive in 3–7 business days across India.</p>"
+          }
+        },
+        "q3": {
+          "type": "question",
+          "settings": {
+            "question": "Can I return or exchange an item?",
+            "answer": "<p>Yes. Unworn pieces with tags attached can be returned or exchanged within 7 days of delivery.</p>"
+          }
+        },
+        "q4": {
+          "type": "question",
+          "settings": {
+            "question": "How should I care for the garments?",
+            "answer": "<p>Most of our cottons are machine-washable on a gentle cold cycle. Embellished and silk pieces should be dry cleaned. Always check the care label.</p>"
+          }
+        }
+      },
+      "block_order": ["q1", "q2", "q3", "q4"],
+      "settings": {
+        "eyebrow": "Good to know",
+        "heading": "Frequently asked questions",
+        "open_first": true
+      }
+    }
   },
-  "order": ["main"]
+  "order": ["main", "details", "faq"]
 }

@@ -1,0 +1,153 @@
+{%- liquid
+  assign mf = product.metafields.custom
+  assign specs = mf.specifications.value
+  assign material = mf.material.value
+  assign care = mf.care_instructions.value
+  assign wearing = mf.wearing.value
+  assign detail = mf.detail_image.value
+  assign has_structured = false
+  if specs != blank or material != blank or care != blank or wearing != blank
+    assign has_structured = true
+  endif
+  assign review_count = product.metafields.reviews.rating_count.value | default: 0
+-%}
+
+<section class="pdt" data-tabs>
+  <div class="wrap">
+    <div class="pdt__tabs" role="tablist">
+      <button type="button" role="tab" id="tab-desc-{{ section.id }}" aria-controls="panel-desc-{{ section.id }}" aria-selected="true">Description</button>
+      <button type="button" role="tab" id="tab-info-{{ section.id }}" aria-controls="panel-info-{{ section.id }}" aria-selected="false" tabindex="-1">Additional information</button>
+      {%- if section.settings.show_reviews -%}
+        <button type="button" role="tab" id="tab-rev-{{ section.id }}" aria-controls="panel-rev-{{ section.id }}" aria-selected="false" tabindex="-1">Reviews ({{ review_count }})</button>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%} ── Description ── {%- endcomment -%}
+    <div class="pdt__panel" role="tabpanel" id="panel-desc-{{ section.id }}" aria-labelledby="tab-desc-{{ section.id }}">
+      <div class="pdt__desc{% if detail != blank %} has-image{% endif %}">
+        <div class="pdt__copy">
+          {%- if has_structured -%}
+            {%- if specs != blank -%}
+              <h3>Specifications</h3>
+              <p>{{ specs | newline_to_br }}</p>
+            {%- endif -%}
+            {%- if material != blank -%}
+              <h3>Material</h3>
+              <p>{{ material }}</p>
+            {%- endif -%}
+            {%- if care != blank -%}
+              <h3>Care instructions</h3>
+              <ul class="pdt__care">
+                {%- for line in care -%}
+                  {%- liquid
+                    assign l = line | downcase
+                    assign icon = 'dot'
+                    if l contains 'bleach'
+                      assign icon = 'bleach'
+                    elsif l contains 'iron'
+                      assign icon = 'iron'
+                    elsif l contains 'dry clean'
+                      assign icon = 'dry'
+                    elsif l contains 'tumble'
+                      assign icon = 'tumble'
+                    elsif l contains 'wash'
+                      assign icon = 'wash'
+                    endif
+                  -%}
+                  <li>{% render 'pdp-icon', name: icon %}<span>{{ line }}</span></li>
+                {%- endfor -%}
+              </ul>
+            {%- endif -%}
+            {%- if wearing != blank -%}
+              <h3>Wearing</h3>
+              <p>{{ wearing | newline_to_br }}</p>
+            {%- endif -%}
+          {%- else -%}
+            <div class="prose-lyra">{{ product.description }}</div>
+          {%- endif -%}
+        </div>
+        {%- if detail != blank -%}
+          <div class="pdt__img">
+            {{ detail | image_url: width: 900 | image_tag: loading: 'lazy', sizes: '(min-width: 1024px) 420px, 80vw', alt: product.title }}
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+
+    {%- comment -%} ── Additional information ── {%- endcomment -%}
+    <div class="pdt__panel" role="tabpanel" id="panel-info-{{ section.id }}" aria-labelledby="tab-info-{{ section.id }}" hidden>
+      <table class="pdt__table">
+        <tbody>
+          {%- unless product.has_only_default_variant -%}
+            {%- for option in product.options_with_values -%}
+              <tr><th>{{ option.name }}</th><td>{{ option.values | join: ', ' }}</td></tr>
+            {%- endfor -%}
+          {%- endunless -%}
+          {%- if material != blank -%}<tr><th>Material</th><td>{{ material }}</td></tr>{%- endif -%}
+          {%- if product.type != blank -%}<tr><th>Category</th><td>{{ product.type }}</td></tr>{%- endif -%}
+          {%- if product.vendor != blank -%}<tr><th>Brand</th><td>{{ product.vendor }}</td></tr>{%- endif -%}
+          {%- assign v = product.selected_or_first_available_variant -%}
+          {%- if v.weight > 0 -%}<tr><th>Weight</th><td>{{ v.weight | weight_with_unit }}</td></tr>{%- endif -%}
+        </tbody>
+      </table>
+    </div>
+
+    {%- comment -%} ── Reviews ── {%- endcomment -%}
+    {%- if section.settings.show_reviews -%}
+      <div class="pdt__panel" role="tabpanel" id="panel-rev-{{ section.id }}" aria-labelledby="tab-rev-{{ section.id }}" hidden>
+        {%- if section.blocks.size > 0 -%}
+          {%- for block in section.blocks -%}
+            <div {{ block.shopify_attributes }}>{% render block %}</div>
+          {%- endfor -%}
+        {%- else -%}
+          <p class="pdt__empty">There are no reviews yet. Be the first to review &ldquo;{{ product.title }}&rdquo;.</p>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% stylesheet %}
+  .pdt { padding-block: 1rem 4rem; }
+  .pdt__tabs { display: flex; gap: 2.25rem; border-bottom: 1px solid rgb(74 36 41 / .14); overflow-x: auto; scrollbar-width: none; }
+  .pdt__tabs::-webkit-scrollbar { display: none; }
+  .pdt__tabs button {
+    position: relative; flex: 0 0 auto; padding-block: 1rem; font-size: 16px; font-weight: 500;
+    color: var(--color-ink); opacity: .55; cursor: pointer; transition: opacity .25s ease;
+  }
+  .pdt__tabs button::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--color-plum); transform: scaleX(0); transition: transform .35s ease; }
+  .pdt__tabs button[aria-selected="true"] { opacity: 1; color: var(--color-plum); }
+  .pdt__tabs button[aria-selected="true"]::after { transform: scaleX(1); }
+  .pdt__panel { padding-top: 2.5rem; }
+  .pdt__panel[hidden] { display: none; }
+
+  .pdt__desc { display: grid; gap: 2.5rem; align-items: center; }
+  @media (min-width: 1024px) { .pdt__desc.has-image { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 5rem; } }
+  .pdt__copy { max-width: 46rem; font-size: 15px; line-height: 1.75; color: var(--color-ink); }
+  .pdt__copy h3 { font-family: var(--font-sans); font-size: 16px; font-weight: 500; color: var(--color-plum); margin-top: 1.75rem; margin-bottom: .5rem; }
+  .pdt__copy h3:first-child { margin-top: 0; }
+  .pdt__care { display: grid; gap: .6rem; }
+  .pdt__care li { display: flex; align-items: center; gap: .75rem; }
+  .pdt__care svg { width: 24px; height: 24px; flex: 0 0 auto; fill: none; stroke: var(--color-plum); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+  .pdt__img { justify-self: center; width: min(26rem, 80vw); aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: var(--color-sand); }
+  .pdt__img img { width: 100%; height: 100%; object-fit: cover; }
+
+  .pdt__table { width: 100%; max-width: 52rem; border-collapse: collapse; font-size: 15px; }
+  .pdt__table th, .pdt__table td { padding: .9rem 1rem; border: 1px solid rgb(74 36 41 / .14); text-align: left; vertical-align: top; }
+  .pdt__table th { width: 30%; font-weight: 500; color: var(--color-plum); background: var(--color-sand); }
+  .pdt__table td { color: var(--color-ink); }
+  .pdt__empty { font-size: 15px; color: var(--color-ink); }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Product tabs",
+  "enabled_on": { "templates": ["product"] },
+  "settings": [
+    { "type": "checkbox", "id": "show_reviews", "label": "Show Reviews tab", "default": true },
+    { "type": "paragraph", "content": "Description reads the product metafields custom.specifications, custom.material, custom.care_instructions, custom.wearing and custom.detail_image. When none are filled in, the product description is shown instead." }
+  ],
+  "blocks": [{ "type": "@app" }],
+  "presets": [{ "name": "Product tabs" }]
+}
+{% endschema %}
