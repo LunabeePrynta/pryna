@@ -2,17 +2,20 @@
   "type": "footer",
   "name": "Footer",
   "sections": {
-    "newsletter": { "type": "newsletter", "settings": {} },
     "footer": {
       "type": "footer",
       "blocks": {
+        "perk_ship": { "type": "perk", "settings": { "icon": "truck", "title": "Free shipping", "text": "On every order over ₹2,500" } },
+        "perk_member": { "type": "perk", "settings": { "icon": "coin", "title": "Member pricing", "text": "Early access and private sales" } },
+        "perk_cotton": { "type": "perk", "settings": { "icon": "leaf", "title": "OEKO-TEX cotton", "text": "No azo dyes or plastic trims" } },
+        "perk_help": { "type": "perk", "settings": { "icon": "support", "title": "Here to help", "text": "Mon–Sat, 10am–7pm IST" } },
         "shop": { "type": "menu", "settings": { "heading": "Shop", "menu": "main-menu" } },
         "care": { "type": "menu", "settings": { "heading": "Care", "menu": "footer" } },
         "house": { "type": "menu", "settings": { "heading": "House", "menu": "footer" } }
       },
-      "block_order": ["shop", "care", "house"],
+      "block_order": ["perk_ship", "perk_member", "perk_cotton", "perk_help", "shop", "care", "house"],
       "settings": {}
     }
   },
-  "order": ["newsletter", "footer"]
+  "order": ["footer"]
 }

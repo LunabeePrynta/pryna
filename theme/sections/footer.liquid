@@ -1,71 +1,445 @@
-<footer class="bg-plum text-cream border-t border-cream/10">
-  <div class="wrap py-14 md:py-16">
+{%- comment -%}
+  Footer in two bands. The top band carries the newsletter, the service
+  promises and the app links; the lower band carries the brand, the menus and
+  the contact details. The newsletter used to be its own section above the
+  footer — it is folded in here so the whole block reads as one plum slab.
+{%- endcomment -%}
 
-    <div class="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)] md:gap-10">
+{%- liquid
+  assign s = section.settings
 
-      <div class="max-w-xs">
-        <a href="{{ routes.root_url }}" class="inline-block leading-none">
+  assign menus = section.blocks | where: 'type', 'menu'
+  assign perks = section.blocks | where: 'type', 'perk'
+  assign apps = section.blocks | where: 'type', 'app'
+
+  comment
+    The menu columns sit between two wider tracks, so the template is built
+    from the count rather than hardcoded — add or remove a column in the
+    editor and the row still balances.
+  endcomment
+  assign menu_cols = menus.size
+-%}
+
+<footer class="ft">
+  <div class="wrap">
+
+    {%- comment -%} ── Newsletter · perks · apps ───────────────── {%- endcomment -%}
+    {%- if s.show_newsletter or perks.size > 0 or apps.size > 0 -%}
+      <div class="ft__top">
+
+        {%- if s.show_newsletter -%}
+          <div class="ft__news">
+            <h2 class="ft__news-title">{{ s.news_heading }}</h2>
+            {%- if s.news_body != blank -%}
+              <p class="ft__news-body">{{ s.news_body }}</p>
+            {%- endif -%}
+
+            {%- form 'customer', class: 'ft__form' -%}
+              <input type="hidden" name="contact[tags]" value="newsletter">
+              <label class="sr-only" for="ft-email">{{ 'general.newsletter.email' | t }}</label>
+              <input
+                id="ft-email"
+                class="ft__input"
+                type="email"
+                name="contact[email]"
+                required
+                autocomplete="email"
+                placeholder="{{ 'general.newsletter.email' | t }}"
+              >
+              <button type="submit" class="ft__send" aria-label="{{ 'general.newsletter.submit' | t }}">
+                <svg width="17" height="13" viewBox="0 0 17 13" fill="none" aria-hidden="true">
+                  <rect x="0.6" y="0.6" width="15.8" height="11.8" stroke="currentColor" stroke-width="1.2"/>
+                  <path d="M1 1.4 8.5 7 16 1.4" stroke="currentColor" stroke-width="1.2"/>
+                </svg>
+              </button>
+              {%- if form.posted_successfully? -%}
+                <p class="ft__note">{{ 'general.newsletter.success' | t }}</p>
+              {%- elsif form.errors -%}
+                <p class="ft__note">{{ form.errors.messages['email'] }}</p>
+              {%- endif -%}
+            {%- endform -%}
+          </div>
+        {%- endif -%}
+
+        {%- if perks.size > 0 -%}
+          <ul class="ft__perks" role="list">
+            {%- for block in perks -%}
+              <li class="ft__perk" {{ block.shopify_attributes }}>
+                <span class="ft__perk-icon" aria-hidden="true">
+                  {%- case block.settings.icon -%}
+                    {%- when 'truck' -%}
+                      <svg width="22" height="18" viewBox="0 0 22 18" fill="none">
+                        <path d="M1 1h12v11H1zM13 5h4l3 3.5V12h-7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                        <circle cx="5.5" cy="14.5" r="2" stroke="currentColor" stroke-width="1.3"/>
+                        <circle cx="16" cy="14.5" r="2" stroke="currentColor" stroke-width="1.3"/>
+                      </svg>
+                    {%- when 'coin' -%}
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.3"/>
+                        <path d="M10 4.5v11M12.6 7.2c0-1.1-1.2-1.8-2.6-1.8s-2.6.7-2.6 1.8 1.2 1.7 2.6 2 2.6.9 2.6 2-1.2 1.8-2.6 1.8-2.6-.7-2.6-1.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                      </svg>
+                    {%- when 'tag' -%}
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M10.2 1H1v9.2l8.8 8.8 9.2-9.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                        <circle cx="5.6" cy="5.6" r="1.6" stroke="currentColor" stroke-width="1.3"/>
+                      </svg>
+                    {%- when 'leaf' -%}
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M18 2C9 2 3 5.5 3 12a6 6 0 0 0 .9 3.2C6 10 10 7.2 14.5 6.4 10.6 8.4 6.6 11.6 5 18" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    {%- else -%}
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M6.2 2.4 8.4 6 6.6 8.2a11 11 0 0 0 5.2 5.2L14 11.6l3.6 2.2c.6.4.8 1.2.4 1.8l-1 1.5c-.5.8-1.5 1.1-2.4.8C9 16 4 11 1.9 5.4c-.3-.9 0-1.9.8-2.4l1.5-1c.6-.4 1.4-.2 1.8.4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                      </svg>
+                  {%- endcase -%}
+                </span>
+                <span class="ft__perk-copy">
+                  <span class="ft__perk-title">{{ block.settings.title }}</span>
+                  {%- if block.settings.text != blank -%}
+                    <span class="ft__perk-text">{{ block.settings.text }}</span>
+                  {%- endif -%}
+                </span>
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+        {%- if apps.size > 0 -%}
+          <div class="ft__apps">
+            {%- if s.apps_heading != blank -%}
+              <h2 class="ft__apps-title">{{ s.apps_heading }}</h2>
+            {%- endif -%}
+            <div class="ft__apps-row">
+              {%- for block in apps -%}
+                {%- if block.settings.image != blank -%}
+                  <a
+                    href="{{ block.settings.url | default: '#' }}"
+                    class="ft__app"
+                    {{ block.shopify_attributes }}
+                    {% if block.settings.url == blank %}aria-disabled="true"{% endif %}
+                  >
+                    <img
+                      src="{{ block.settings.image | image_url: width: 360 }}"
+                      alt="{{ block.settings.alt | escape }}"
+                      width="{{ block.settings.image.width }}"
+                      height="{{ block.settings.image.height }}"
+                      loading="lazy"
+                    >
+                  </a>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          </div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} ── Brand · menus · contact ─────────────────── {%- endcomment -%}
+    <div
+      class="ft__main"
+      {% if menu_cols > 0 %}style="--ft-menus: {{ menu_cols }};"{% endif %}
+    >
+      <div class="ft__brand">
+        <a href="{{ routes.root_url }}" class="ft__logo" aria-label="{{ shop.name | escape }}">
           {%- if settings.logo != blank -%}
-            <img src="{{ settings.logo | image_url: width: 300 }}" alt="{{ shop.name | escape }}" style="width: {{ settings.logo_width }}px;" class="h-auto">
+            <img
+              src="{{ settings.logo | image_url: width: 400 }}"
+              alt="{{ shop.name | escape }}"
+              style="width: {{ settings.logo_width }}px;"
+              width="{{ settings.logo.width }}"
+              height="{{ settings.logo.height }}"
+            >
           {%- else -%}
             <span class="font-display block text-[30px] text-cream leading-none">{{ settings.logo_word }}</span>
             <span class="block text-[10px] tracking-mega uppercase text-amber mt-1">{{ settings.logo_sub }}</span>
           {%- endif -%}
         </a>
-        <p class="mt-5 text-ui font-light leading-relaxed text-cream">{{ section.settings.tagline }}</p>
+
+        {%- if s.tagline != blank -%}
+          <p class="ft__tagline">{{ s.tagline }}</p>
+        {%- endif -%}
+
+        <div class="ft__social">
+          {%- if settings.social_instagram_url != blank -%}
+            <a href="{{ settings.social_instagram_url }}" aria-label="Instagram">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <rect x="1" y="1" width="16" height="16" rx="4.5" stroke="currentColor" stroke-width="1.3"/>
+                <circle cx="9" cy="9" r="3.6" stroke="currentColor" stroke-width="1.3"/>
+                <circle cx="13.6" cy="4.4" r="1" fill="currentColor"/>
+              </svg>
+            </a>
+          {%- endif -%}
+          {%- if settings.social_facebook_url != blank -%}
+            <a href="{{ settings.social_facebook_url }}" aria-label="Facebook">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.3"/>
+                <path d="M11 6H9.8c-.6 0-1 .4-1 1v1.4H11l-.3 2.2H8.8V16" stroke="currentColor" stroke-width="1.3"/>
+              </svg>
+            </a>
+          {%- endif -%}
+          {%- if settings.social_pinterest_url != blank -%}
+            <a href="{{ settings.social_pinterest_url }}" aria-label="Pinterest">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.3"/>
+                <path d="M7.4 16c-.4-1.3 0-2.7.3-4 .3-1.1-.6-3.4 1.2-3.6 1.6-.2 1.3 2.2.7 3.1.9 1.3 3.1.2 3.3-1.6.3-2.4-2-3.8-4-3.3-2.2.6-3 3.4-1.4 4.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+            </a>
+          {%- endif -%}
+          {%- if settings.social_youtube_url != blank -%}
+            <a href="{{ settings.social_youtube_url }}" aria-label="YouTube">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <rect x="1" y="3.5" width="16" height="11" rx="3.2" stroke="currentColor" stroke-width="1.3"/>
+                <path d="M7.5 6.6 11.8 9l-4.3 2.4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          {%- endif -%}
+        </div>
       </div>
 
-      {%- for block in section.blocks -%}
+      {%- for block in menus -%}
         {%- assign list = linklists[block.settings.menu] -%}
-        <nav {{ block.shopify_attributes }} aria-label="{{ block.settings.heading }}">
-          <h2 class="text-ui tracking-widest2 uppercase text-gold">{{ block.settings.heading }}</h2>
-          <ul class="mt-5 space-y-2.5">
+        <nav class="ft__col" {{ block.shopify_attributes }} aria-label="{{ block.settings.heading }}">
+          <h2 class="ft__col-title">{{ block.settings.heading }}</h2>
+          <ul class="ft__links" role="list">
             {%- for link in list.links -%}
-              <li>
-                <a href="{{ link.url }}" class="link-underline text-ui font-light text-cream hover:text-cream transition-colors">
-                  {{ link.title }}
-                </a>
-              </li>
+              <li><a href="{{ link.url }}" class="link-underline">{{ link.title }}</a></li>
             {%- endfor -%}
           </ul>
         </nav>
       {%- endfor -%}
+
+      {%- if s.show_contact -%}
+        <div class="ft__contact">
+          <h2 class="ft__col-title">{{ s.contact_heading }}</h2>
+          <ul class="ft__links" role="list">
+            {%- if s.address != blank -%}
+              <li class="ft__line">
+                <svg width="14" height="16" viewBox="0 0 14 16" fill="none" aria-hidden="true">
+                  <path d="M7 15S1 9.9 1 6.3a6 6 0 1 1 12 0C13 9.9 7 15 7 15z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                  <circle cx="7" cy="6.2" r="2" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+                <span>{{ s.address | newline_to_br }}</span>
+              </li>
+            {%- endif -%}
+            {%- if settings.contact_phone != blank -%}
+              <li class="ft__line">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M5 1.9 6.8 4.8 5.3 6.6a9 9 0 0 0 4.1 4.1l1.8-1.5 2.9 1.8c.5.3.6 1 .3 1.4l-.8 1.2c-.4.6-1.2.9-1.9.6C6.9 12.7 3 8.8 1.4 3.3c-.2-.7 0-1.5.7-1.9l1.2-.8c.4-.3 1.1-.2 1.4.3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                </svg>
+                <a href="tel:{{ settings.contact_phone | remove: ' ' }}" class="link-underline">{{ settings.contact_phone }}</a>
+              </li>
+            {%- endif -%}
+            {%- if settings.contact_email != blank -%}
+              <li class="ft__line">
+                <svg width="15" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+                  <rect x="0.7" y="0.7" width="14.6" height="10.6" stroke="currentColor" stroke-width="1.3"/>
+                  <path d="M1 1.4 8 6.5l7-5.1" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+                <a href="mailto:{{ settings.contact_email }}" class="link-underline">{{ settings.contact_email }}</a>
+              </li>
+            {%- endif -%}
+          </ul>
+        </div>
+      {%- endif -%}
     </div>
 
-    <div class="mt-12 pt-6 border-t border-cream/12 flex flex-wrap items-center justify-between gap-4">
-      <p class="text-ui tracking-widest2 uppercase text-cream">
-        &copy; {{ 'now' | date: '%Y' }} {{ shop.name }} &middot; {{ section.settings.city }}
-      </p>
-
-      {%- if section.settings.show_payment_icons and shop.enabled_payment_types.size > 0 -%}
-        <div class="flex flex-wrap items-center gap-2">
+    {%- comment -%} ── Copyright · payment ─────────────────────── {%- endcomment -%}
+    <div class="ft__base">
+      <p>&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}{% if s.city != blank %} &middot; {{ s.city }}{% endif %}</p>
+      {%- if s.show_payment_icons and shop.enabled_payment_types.size > 0 -%}
+        <div class="ft__pay">
           {%- for type in shop.enabled_payment_types -%}
-            <span class="pay-icon">{{ type | payment_type_svg_tag }}</span>
+            <span>{{ type | payment_type_svg_tag }}</span>
           {%- endfor -%}
         </div>
       {%- endif -%}
-
-      <div class="flex items-center gap-5 text-ui tracking-widest2 uppercase text-cream">
-        {%- if settings.social_instagram_url != blank -%}
-          <a href="{{ settings.social_instagram_url }}" class="hover:text-gold transition-colors">Instagram</a>
-        {%- endif -%}
-        {%- if settings.contact_email != blank -%}
-          <a href="mailto:{{ settings.contact_email }}" class="hover:text-gold transition-colors">{{ settings.contact_email }}</a>
-        {%- endif -%}
-      </div>
     </div>
   </div>
 </footer>
 
 {% stylesheet %}
-  .pay-icon svg { height: 22px; width: auto; border-radius: 3px; background: #fff; }
+  .ft {
+    background: var(--color-plum);
+    color: var(--color-cream);
+    border-top: 1px solid rgb(253 243 205 / 0.1);
+  }
+
+  /* Top band ----------------------------------------------------------- */
+  .ft__top {
+    display: grid;
+    gap: 3rem;
+    padding-block: 3.5rem;
+    border-bottom: 1px solid rgb(253 243 205 / 0.12);
+  }
+  @media (min-width: 1024px) {
+    .ft__top {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.5fr) minmax(0, 0.75fr);
+      gap: 4rem;
+      padding-block: 4.5rem;
+    }
+  }
+
+  .ft__news-title {
+    font-family: var(--font-serif);
+    font-size: 34px;
+    line-height: 1.05;
+    color: var(--color-cream);
+    letter-spacing: -0.015em;
+  }
+  .ft__news-body {
+    margin-top: 0.9rem;
+    max-width: 34ch;
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.6;
+    color: var(--color-cream);
+  }
+  .ft__form {
+    display: flex;
+    align-items: stretch;
+    margin-top: 1.5rem;
+    max-width: 26rem;
+    border: 1px solid rgb(253 243 205 / 0.3);
+    transition: border-color 0.3s ease;
+  }
+  .ft__form:focus-within { border-color: var(--color-gold); }
+  .ft__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.9rem 1rem;
+    background: transparent;
+    color: var(--color-cream);
+    font-size: 15px;
+    outline: none;
+  }
+  .ft__input::placeholder { color: rgb(253 243 205 / 0.55); }
+  .ft__send {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    background: var(--color-amber);
+    color: var(--color-cream);
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  .ft__send:hover { background: var(--color-gold); color: var(--color-plum); }
+  .ft__send:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+  .ft__note { margin-top: 0.7rem; font-size: var(--text-ui); color: var(--color-gold); }
+
+  /* Service promises --------------------------------------------------- */
+  .ft__perks {
+    display: grid;
+    gap: 1.75rem 2rem;
+  }
+  @media (min-width: 640px) { .ft__perks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .ft__perk { display: flex; align-items: flex-start; gap: 1rem; }
+  .ft__perk-icon {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgb(253 243 205 / 0.08);
+    color: var(--color-gold);
+  }
+  .ft__perk-copy { display: flex; flex-direction: column; gap: 0.3rem; padding-top: 0.35rem; }
+  .ft__perk-title { font-size: 16px; font-weight: 500; color: var(--color-cream); }
+  .ft__perk-text { font-size: 14px; font-weight: 300; color: rgb(253 243 205 / 0.75); }
+
+  /* App links ---------------------------------------------------------- */
+  .ft__apps-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-cream);
+    margin-bottom: 1.1rem;
+  }
+  .ft__apps-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .ft__app img { width: auto; height: 42px; }
+  .ft__app { transition: opacity 0.3s ease; }
+  .ft__app:hover { opacity: 0.8; }
+
+  /* Lower band --------------------------------------------------------- */
+  .ft__main {
+    display: grid;
+    gap: 2.5rem;
+    padding-block: 3.5rem;
+  }
+  @media (min-width: 640px) { .ft__main { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1024px) {
+    .ft__main {
+      grid-template-columns: minmax(0, 1.6fr) repeat(var(--ft-menus, 3), minmax(0, 1fr)) minmax(0, 1.25fr);
+      gap: 2.5rem;
+      padding-block: 4rem;
+    }
+  }
+  .ft__logo { display: inline-block; line-height: 1; }
+  .ft__logo img { height: auto; }
+  .ft__tagline {
+    margin-top: 1.4rem;
+    max-width: 32ch;
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.65;
+    color: rgb(253 243 205 / 0.8);
+  }
+  .ft__social { display: flex; gap: 1rem; margin-top: 1.6rem; }
+  .ft__social a { color: var(--color-cream); transition: color 0.3s ease; }
+  .ft__social a:hover { color: var(--color-gold); }
+
+  .ft__col-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-cream);
+    margin-bottom: 1.2rem;
+  }
+  .ft__links { display: flex; flex-direction: column; gap: 0.7rem; }
+  .ft__links a {
+    font-size: 15px;
+    font-weight: 300;
+    color: rgb(253 243 205 / 0.8);
+    transition: color 0.3s ease;
+  }
+  .ft__links a:hover { color: var(--color-cream); }
+  .ft__line { display: flex; align-items: flex-start; gap: 0.7rem; font-size: 15px; font-weight: 300; color: rgb(253 243 205 / 0.8); }
+  .ft__line svg { flex: 0 0 auto; margin-top: 0.25rem; color: var(--color-amber); }
+
+  /* Base bar ----------------------------------------------------------- */
+  .ft__base {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 1.5rem 2rem;
+    border-top: 1px solid rgb(253 243 205 / 0.12);
+    font-size: var(--text-ui);
+    letter-spacing: var(--tracking-widest2);
+    text-transform: uppercase;
+    color: rgb(253 243 205 / 0.75);
+  }
+  .ft__pay { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+  .ft__pay svg { height: 22px; width: auto; border-radius: 3px; background: #fff; }
 {% endstylesheet %}
 
 {% schema %}
 {
   "name": "Footer",
   "settings": [
+    { "type": "header", "content": "Newsletter" },
+    { "type": "checkbox", "id": "show_newsletter", "label": "Show newsletter", "default": true },
+    { "type": "text", "id": "news_heading", "label": "Heading", "default": "Join our newsletter" },
+    { "type": "textarea", "id": "news_body", "label": "Body", "default": "First look at new arrivals, early access to small batches, and a note from the atelier each month." },
+    { "type": "header", "content": "App links" },
+    { "type": "text", "id": "apps_heading", "label": "Heading", "default": "Download our apps" },
+    { "type": "header", "content": "Brand" },
     { "type": "textarea", "id": "tagline", "label": "Tagline", "default": "Luxury childrenswear, made in India for the first four years." },
+    { "type": "header", "content": "Contact" },
+    { "type": "checkbox", "id": "show_contact", "label": "Show contact column", "default": true },
+    { "type": "text", "id": "contact_heading", "label": "Heading", "default": "Contact us" },
+    { "type": "textarea", "id": "address", "label": "Address", "default": "Indiranagar, Bengaluru\nKarnataka 560038\nIndia" },
+    { "type": "header", "content": "Base bar" },
     { "type": "text", "id": "city", "label": "City", "default": "Bengaluru" },
     { "type": "checkbox", "id": "show_payment_icons", "label": "Show payment icons", "default": true }
   ],
@@ -77,13 +451,47 @@
         { "type": "text", "id": "heading", "label": "Heading", "default": "Shop" },
         { "type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu" }
       ]
+    },
+    {
+      "type": "perk",
+      "name": "Service promise",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "truck", "label": "Delivery" },
+            { "value": "coin", "label": "Price" },
+            { "value": "tag", "label": "Offer" },
+            { "value": "leaf", "label": "Natural" },
+            { "value": "support", "label": "Support" }
+          ],
+          "default": "truck"
+        },
+        { "type": "text", "id": "title", "label": "Title", "default": "Free shipping" },
+        { "type": "text", "id": "text", "label": "Text", "default": "On every order over ₹2,500" }
+      ]
+    },
+    {
+      "type": "app",
+      "name": "App badge",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Badge image", "info": "Upload the official Google Play or App Store badge." },
+        { "type": "text", "id": "alt", "label": "Alt text", "default": "Download on the App Store" },
+        { "type": "url", "id": "url", "label": "Link" }
+      ]
     }
   ],
-  "max_blocks": 4,
+  "max_blocks": 12,
   "presets": [
     {
       "name": "Footer",
       "blocks": [
+        { "type": "perk", "settings": { "icon": "truck", "title": "Free shipping", "text": "On every order over ₹2,500" } },
+        { "type": "perk", "settings": { "icon": "coin", "title": "Member pricing", "text": "Early access and private sales" } },
+        { "type": "perk", "settings": { "icon": "leaf", "title": "OEKO-TEX cotton", "text": "No azo dyes or plastic trims" } },
+        { "type": "perk", "settings": { "icon": "support", "title": "Here to help", "text": "Mon–Sat, 10am–7pm IST" } },
         { "type": "menu", "settings": { "heading": "Shop" } },
         { "type": "menu", "settings": { "heading": "Care" } },
         { "type": "menu", "settings": { "heading": "House" } }

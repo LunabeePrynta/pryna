@@ -10,41 +10,159 @@
   {
     "name": "Brand",
     "settings": [
-      { "type": "image_picker", "id": "logo", "label": "Logo image", "info": "Leave empty to use the wordmark below." },
-      { "type": "text", "id": "logo_word", "label": "Wordmark", "default": "Lyra" },
-      { "type": "text", "id": "logo_sub", "label": "Wordmark subtitle", "default": "Kids" },
-      { "type": "range", "id": "logo_width", "label": "Logo width", "min": 60, "max": 320, "step": 5, "unit": "px", "default": 120 },
-      { "type": "image_picker", "id": "favicon", "label": "Favicon" }
+      {
+        "type": "image_picker",
+        "id": "logo",
+        "label": "Logo image",
+        "info": "Leave empty to use the wordmark below."
+      },
+      {
+        "type": "text",
+        "id": "logo_word",
+        "label": "Wordmark",
+        "default": "Lyra"
+      },
+      {
+        "type": "text",
+        "id": "logo_sub",
+        "label": "Wordmark subtitle",
+        "default": "Kids"
+      },
+      {
+        "type": "range",
+        "id": "logo_width",
+        "label": "Logo width",
+        "min": 60,
+        "max": 320,
+        "step": 5,
+        "unit": "px",
+        "default": 120
+      },
+      {
+        "type": "image_picker",
+        "id": "favicon",
+        "label": "Favicon"
+      }
     ]
   },
   {
     "name": "Colors",
     "settings": [
-      { "type": "color", "id": "color_paper", "label": "Page background", "default": "#FAF5EC" },
-      { "type": "color", "id": "color_ink", "label": "Body text", "default": "#2E1A1D" },
-      { "type": "color", "id": "color_plum", "label": "Headings / dark sections", "default": "#4A2429" },
-      { "type": "color", "id": "color_amber", "label": "Accent", "default": "#C97B2C" },
-      { "type": "color", "id": "color_gold", "label": "Highlight", "default": "#E7B24A" },
-      { "type": "color", "id": "color_cream", "label": "Text on dark", "default": "#FDF3CD" },
-      { "type": "color", "id": "color_sand", "label": "Tile / placeholder", "default": "#EFE7DA" },
-      { "type": "color", "id": "color_clay", "label": "Tile alternate", "default": "#E7DCCB" }
+      {
+        "type": "color",
+        "id": "color_paper",
+        "label": "Page background",
+        "default": "#FAF5EC"
+      },
+      {
+        "type": "color",
+        "id": "color_ink",
+        "label": "Body text",
+        "default": "#2E1A1D"
+      },
+      {
+        "type": "color",
+        "id": "color_plum",
+        "label": "Headings / dark sections",
+        "default": "#4A2429"
+      },
+      {
+        "type": "color",
+        "id": "color_amber",
+        "label": "Accent",
+        "default": "#C97B2C"
+      },
+      {
+        "type": "color",
+        "id": "color_gold",
+        "label": "Highlight",
+        "default": "#E7B24A"
+      },
+      {
+        "type": "color",
+        "id": "color_cream",
+        "label": "Text on dark",
+        "default": "#FDF3CD"
+      },
+      {
+        "type": "color",
+        "id": "color_sand",
+        "label": "Tile / placeholder",
+        "default": "#EFE7DA"
+      },
+      {
+        "type": "color",
+        "id": "color_clay",
+        "label": "Tile alternate",
+        "default": "#E7DCCB"
+      }
     ]
   },
   {
     "name": "Typography",
     "settings": [
-      { "type": "paragraph", "content": "Display type is Cormorant Garamond and UI type is Jost, loaded from Google Fonts to match the brand artwork." },
-      { "type": "range", "id": "display_scale", "label": "Display size scale", "min": 80, "max": 130, "step": 5, "unit": "%", "default": 100 }
+      {
+        "type": "paragraph",
+        "content": "Display type is Cormorant Garamond and UI type is Jost, loaded from Google Fonts to match the brand artwork."
+      },
+      {
+        "type": "range",
+        "id": "display_scale",
+        "label": "Display size scale",
+        "min": 80,
+        "max": 130,
+        "step": 5,
+        "unit": "%",
+        "default": 100
+      }
     ]
   },
   {
     "name": "Social",
     "settings": [
-      { "type": "text", "id": "social_instagram", "label": "Instagram handle", "default": "@lyrakids" },
-      { "type": "url", "id": "social_instagram_url", "label": "Instagram URL" },
-      { "type": "text", "id": "contact_email", "label": "Email", "default": "hello@lyrakids.in" },
-      { "type": "text", "id": "contact_phone", "label": "WhatsApp number", "default": "+91 98765 43210" },
-      { "type": "url", "id": "contact_whatsapp_url", "label": "WhatsApp URL" }
+      {
+        "type": "text",
+        "id": "social_instagram",
+        "label": "Instagram handle",
+        "default": "@lyrakids"
+      },
+      {
+        "type": "url",
+        "id": "social_instagram_url",
+        "label": "Instagram URL"
+      },
+      {
+        "type": "url",
+        "id": "social_facebook_url",
+        "label": "Facebook URL"
+      },
+      {
+        "type": "url",
+        "id": "social_pinterest_url",
+        "label": "Pinterest URL"
+      },
+      {
+        "type": "url",
+        "id": "social_youtube_url",
+        "label": "YouTube URL"
+      },
+      {
+        "type": "text",
+        "id": "contact_email",
+        "label": "Email",
+        "default": "hello@lyrakids.in"
+      },
+      {
+        "type": "text",
+        "id": "contact_phone",
+        "label": "WhatsApp number",
+        "default": "+91 98765 43210"
+      },
+      {
+        "type": "url",
+        "id": "contact_whatsapp_url",
+        "label": "WhatsApp URL"
+      }
     ]
   }
 ]
