@@ -16,22 +16,9 @@
       From
     </p>
     <p class="from-detail">
-      {{ shop.name }}
-      {% if shop_address.address1 != blank %}
-        <br>{{ shop_address.address1 }}
-      {% endif %}
-      {% if shop_address.address2 != blank %}
-        , {{ shop_address.address2 }}
-      {% endif %}
-      {% if shop_address.city_province_zip != blank %}
-        <br>{{ shop_address.city_province_zip }}
-      {% endif %}
-      {% if shop_address.country != blank %}
-        <br>{{ shop_address.country }}
-      {% endif %}
-      {% if shop.phone != blank %}
-        <br>Ph: {{ shop.phone }}
-      {% endif %}
+      {{ shop.name }}<br>
+      {{ shop_address.summary }}
+      {% if shop.phone != blank %}<br>Ph: {{ shop.phone }}{% endif %}
     </p>
   </div>
 
@@ -39,32 +26,14 @@
 
   <div class="to-block">
     <p class="block-label to-uppercase">
-      {% if delivery_method.instructions != blank %}
-        Deliver to
-      {% else %}
-        Ship to
-      {% endif %}
+      Ship to
     </p>
     <p class="to-detail">
-      {% if shipping_address != blank %}
-        <strong>{{ shipping_address.name }}</strong>
-        {% if shipping_address.company != blank %}
-          <br>{{ shipping_address.company }}
-        {% endif %}
-        <br>{{ shipping_address.address1 }}
-        {% if shipping_address.address2 != blank %}
-          , {{ shipping_address.address2 }}
-        {% endif %}
-        {% if shipping_address.city_province_zip != blank %}
-          <br><strong>{{ shipping_address.city_province_zip }}</strong>
-        {% endif %}
-        <br>{{ shipping_address.country }}
-        {% if shipping_address.phone != blank %}
-          <br>Ph: {{ shipping_address.phone }}
-        {% endif %}
-      {% else %}
-        No shipping address
-      {% endif %}
+      <strong>{{ shipping_address.name }}</strong><br>
+      {{ shipping_address.address1 }}{% if shipping_address.address2 != blank %}, {{ shipping_address.address2 }}{% endif %}<br>
+      <strong>{{ shipping_address.city_province_zip }}</strong><br>
+      {{ shipping_address.country }}
+      {% if shipping_address.phone != blank %}<br>Ph: {{ shipping_address.phone }}{% endif %}
     </p>
   </div>
 
@@ -73,12 +42,6 @@
       <span class="meta-label">Order</span>
       <span class="meta-value">{{ order.name }}</span>
     </div>
-    {% if order.po_number != blank %}
-      <div class="meta-row">
-        <span class="meta-label">PO number</span>
-        <span class="meta-value">#{{ order.po_number }}</span>
-      </div>
-    {% endif %}
     <div class="meta-row">
       <span class="meta-label">Date</span>
       <span class="meta-value">{{ order.created_at | date: format: 'date' }}</span>
@@ -97,20 +60,6 @@
     {% endif %}
   </div>
 
-  {% if order.note != blank %}
-    <div class="notes">
-      <p class="block-label to-uppercase">Notes</p>
-      <p class="notes-detail">{{ order.note }}</p>
-    </div>
-  {% endif %}
-
-  {% if delivery_method.instructions != blank %}
-    <div class="notes">
-      <p class="block-label to-uppercase">Delivery instructions</p>
-      <p class="notes-detail">{{ delivery_method.instructions }}</p>
-    </div>
-  {% endif %}
-
   <div class="spacer"></div>
 
   <hr>
@@ -118,7 +67,7 @@
   <div class="return-block">
     <p class="return-label to-uppercase">Return Address</p>
     <p class="return-detail">
-      {{ shop.name }}{% if shop_address.summary != blank %}, {{ shop_address.summary }}{% endif %}
+      {{ shop.name }}, {{ shop_address.summary }}
     </p>
   </div>
 
@@ -241,16 +190,6 @@
   .meta-value {
     font-weight: bold;
     text-align: right;
-  }
-
-  .notes {
-    margin-top: 0.6em;
-  }
-
-  .notes-detail {
-    margin-top: 0.3em;
-    font-size: 0.95em;
-    line-height: 1.4;
   }
 
   .spacer {
