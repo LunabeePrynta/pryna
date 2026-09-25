@@ -179,31 +179,65 @@ function isCashOnDelivery(order) {
 
 const round2 = (n) => Math.round(Number(n) * 100) / 100;
 
+const RECEIVER_FIELDS = ['name', 'company', 'address1', 'address2', 'city', 'province', 'zip', 'phone'];
+
+/**
+ * Cleans per-shipment edits coming from the "Create shipment" form. Only known fields survive;
+ * anything left out falls back to the order data and shop settings.
+ */
+export function sanitizeOverrides(input) {
+  if (!input || typeof input !== 'object') return {};
+  const out = {};
+  if (input.receiver && typeof input.receiver === 'object') {
+    out.receiver = {};
+    for (const key of RECEIVER_FIELDS) {
+      if (typeof input.receiver[key] === 'string') out.receiver[key] = input.receiver[key].trim().slice(0, 240);
+    }
+  }
+  if (input.product && PRODUCTS[input.product]) out.product = input.product;
+  const num = (v) => (v === '' || v === null || v === undefined || !Number.isFinite(Number(v)) ? undefined : Number(v));
+  if (num(input.weightGrams) > 0) out.weightGrams = Math.round(num(input.weightGrams));
+  if (input.dimensions && typeof input.dimensions === 'object') {
+    const d = { length: num(input.dimensions.length), breadth: num(input.dimensions.breadth), height: num(input.dimensions.height) };
+    if (d.length > 0 && d.breadth > 0 && d.height > 0) out.dimensions = d;
+  }
+  if (num(input.codAmount) !== undefined) out.codAmount = Math.max(0, num(input.codAmount));
+  if (num(input.insuranceValue) !== undefined) out.insuranceValue = Math.max(0, num(input.insuranceValue));
+  return out;
+}
+
 /**
  * Builds one booking article for the Bulk Booking API.
+ * `overrides` (see sanitizeOverrides) replace order data / defaults for this shipment only.
  * Returns { article, errors } — errors are problems found before calling India Post.
  */
-export function buildArticle(order, settings, barcode) {
+export function buildArticle(order, settings, barcode, overrides = {}) {
   const errors = [];
   const ip = settings.indiaPost;
   const pkg = settings.package;
 
-  const weight = Math.max(
-    1,
-    Math.round((Number(order.totalWeightGrams) || Number(pkg.defaultWeightGrams) || 0) + (Number(pkg.packagingWeightGrams) || 0)),
-  );
-  const articleType = chooseArticleType(settings.product, weight);
+  const weight =
+    overrides.weightGrams ??
+    Math.max(
+      1,
+      Math.round((Number(order.totalWeightGrams) || Number(pkg.defaultWeightGrams) || 0) + (Number(pkg.packagingWeightGrams) || 0)),
+    );
+  const articleType = chooseArticleType(overrides.product ?? settings.product, weight);
   const doc = isDocument(articleType);
-  const dims = doc ? pkg.doc : pkg.parcel;
+  const dims = overrides.dimensions ?? (doc ? pkg.doc : pkg.parcel);
   const contractId = ip.contracts?.[contractKey(articleType)];
 
-  const address = order.shippingAddress;
+  const address =
+    order.shippingAddress || overrides.receiver ? { ...(order.shippingAddress ?? {}), ...(overrides.receiver ?? {}) } : null;
   if (!address) errors.push('Order has no shipping address');
   const receiverPincode = normalizePincode(address?.zip);
   if (address && !receiverPincode) errors.push(`Invalid receiver pincode "${address?.zip ?? ''}"`);
   if (address?.countryCode && address.countryCode !== 'IN') errors.push('Only domestic (India) addresses are supported');
-  const receiverMobile =
-    normalizeMobile(address?.phone) ?? normalizeMobile(order.phone) ?? normalizeMobile(order.customer?.phone);
+  if (address && String(address.name ?? '').trim().length < 3) errors.push('Receiver name must be at least 3 characters');
+  if (address && String(address.city ?? '').trim().length < 3) errors.push('Receiver city must be at least 3 characters');
+  const receiverMobile = overrides.receiver?.phone
+    ? normalizeMobile(overrides.receiver.phone)
+    : normalizeMobile(address?.phone) ?? normalizeMobile(order.phone) ?? normalizeMobile(order.customer?.phone);
   if (!receiverMobile) errors.push('Receiver needs a 10 digit Indian mobile number (starting 6–9)');
 
   const sender = settings.sender;
@@ -229,9 +263,14 @@ export function buildArticle(order, settings, barcode) {
   const senderLines = splitAddress(sender.address1, sender.address2, sender.address3);
   if (address && receiverLines[0].length < 3) errors.push('Receiver address line 1 is too short');
 
-  const cod = settings.cod?.enabled && isCashOnDelivery(order);
-  const codValue = cod ? round2(order.outstandingAmount || order.totalAmount) : '';
-  const insure = settings.insurance?.enabled && Number(order.totalAmount) >= Number(settings.insurance.minOrderValue || 0);
+  const cod =
+    overrides.codAmount !== undefined ? overrides.codAmount > 0 : settings.cod?.enabled && isCashOnDelivery(order);
+  const codValue = cod ? round2(overrides.codAmount ?? (order.outstandingAmount || order.totalAmount)) : '';
+  const insure =
+    overrides.insuranceValue !== undefined
+      ? overrides.insuranceValue > 0
+      : settings.insurance?.enabled && Number(order.totalAmount) >= Number(settings.insurance.minOrderValue || 0);
+  const insuranceValue = insure ? round2(overrides.insuranceValue ?? order.totalAmount) : 0;
   const pickup = settings.mode === 'PICKUP';
   const otp = articleType === '24_SPP_PARSPL'; // OTP is mandatory for 24_SPP_PARSPL
 
@@ -285,7 +324,7 @@ export function buildArticle(order, settings, barcode) {
     codr_cod: cod ? 'COD' : '',
     value_for_codr_cod: codValue,
     insurance_type: insure ? 'DOP' : '',
-    value_of_insurance: insure ? round2(order.totalAmount) : 0,
+    value_of_insurance: insuranceValue,
     ack: 'FALSE',
     reg: 'FALSE',
     otp: otp ? 'TRUE' : 'FALSE',

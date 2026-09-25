@@ -1,0 +1,11 @@
+# Orders list → select orders → "More actions" → Book with India Post.
+# Opens the app with the selected order ids pre-selected for booking and label download.
+[[extensions]]
+name = "Book with India Post"
+description = "Book the selected orders with India Post and download their labels"
+handle = "book-orders-indiapost"
+type = "admin_link"
+
+  [[extensions.targeting]]
+  target = "admin.order-index.selection-action.link"
+  url = "/"

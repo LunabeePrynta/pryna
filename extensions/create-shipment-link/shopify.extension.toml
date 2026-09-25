@@ -1,0 +1,11 @@
+# Order details page → "More actions" → Create India Post shipment.
+# Opens the app with ?id=<order id>, which shows the "Create shipment" form for that order.
+[[extensions]]
+name = "Create India Post shipment"
+description = "Book this order with India Post and download its shipping label"
+handle = "create-indiapost-shipment"
+type = "admin_link"
+
+  [[extensions.targeting]]
+  target = "admin.order-details.action.link"
+  url = "/"

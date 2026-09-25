@@ -71,6 +71,10 @@ function createFakes() {
       calls.labels.push(body);
       return new Response(Buffer.from('%PDF-1.4 fake label'), { headers: { 'content-type': 'application/pdf' } });
     }
+    if (url.startsWith(`${IP_BASE}/v1/speed-post/tariffs`)) {
+      calls.tariffs = [...(calls.tariffs ?? []), Object.fromEntries(new URL(url).searchParams)];
+      return json({ success: true, product_code: 'SP_INLAND_PARCEL', chargeable_weight: 1200, base_tariff: 90, total_tax: 16, final_amount: 106, currency: 'INR', delivery_type: 'Inter-city' });
+    }
     if (url === `${IP_BASE}/v1/tracking/bulk`) {
       calls.tracking.push(body);
       return json({
@@ -251,4 +255,85 @@ test('booking errors are reported per order and can be retried with the same AWB
   const retry = (await (await call('/api/orders/push', { method: 'POST', body: { orderIds: [order.id] } })).json()).results[0];
   assert.equal(retry.status, 'BOOKED', JSON.stringify(retry));
   assert.equal(retry.barcode, first.barcode);
+});
+
+const SETTINGS = {
+  indiaPost: { username: 'u', password: 'p', bulkCustomerId: '3000064781', contracts: { SPEED_POST: '41585456' } },
+  barcode: { seriesStart: 'ET21433001XIN', seriesEnd: 'ET21434000XIN' },
+  officeId: '21260024',
+  sender: { name: 'Luna Bee Store', address1: '12 MG Road', city: 'Chennai', pincode: '600001', mobile: '9876543210' },
+  label: { bookingOfficeName: 'Chennai GPO', bookingOfficePin: '600001' },
+};
+
+test('create shipment form: prefill, validate, quote, book with edits, download and print label', async (t) => {
+  const { server, base, call, calls, order } = await setup();
+  t.after(() => server.close());
+  await call('/api/bootstrap');
+  await call('/api/settings', { method: 'PUT', body: { settings: SETTINGS } });
+
+  // Admin link from the orders list passes numeric ids.
+  const numericId = order.id.split('/').pop();
+  const listed = await (await call(`/api/orders?ids=${numericId}`)).json();
+  assert.equal(listed.orders[0].id, order.id);
+  const ordersQuery = calls.graphql.findLast((g) => /RecentOrders/.test(g.query)).variables.query;
+  assert.equal(ordersQuery, `id:${numericId}`);
+
+  // Prefilled form.
+  const draft = await (await call(`/api/order?id=${numericId}`)).json();
+  assert.equal(draft.order.name, '#1001');
+  assert.equal(draft.form.receiver.name, 'Asha Kumar');
+  assert.equal(draft.form.receiver.phone, '9876501234');
+  assert.equal(draft.form.weightGrams, 800);
+  assert.equal(draft.articleType, 'SP_INLAND_PARCEL');
+  assert.deepEqual(draft.errors, []);
+  assert.equal(draft.shipment, null);
+
+  // Live validation of edits.
+  const bad = await (await call('/api/order/validate', { method: 'POST', body: { orderId: order.id, overrides: { receiver: { zip: '12' } } } })).json();
+  assert.ok(bad.errors.some((e) => e.includes('pincode')));
+
+  // Rate quote uses the edited weight / size.
+  const edits = { weightGrams: '1200', dimensions: { length: '30', breadth: '20', height: '10' }, codAmount: '0', insuranceValue: '0', receiver: { address2: 'Near Metro Station' } };
+  const quote = await (await call('/api/order/quote', { method: 'POST', body: { orderId: order.id, overrides: edits } })).json();
+  assert.equal(quote.available, true);
+  assert.equal(quote.total, 106);
+  assert.equal(calls.tariffs[0].weight, '1200');
+  assert.equal(calls.tariffs[0]['destination-pincode'], '560038');
+
+  // Book with the edits.
+  const shipped = await (await call('/api/order/ship', { method: 'POST', body: { orderId: order.id, overrides: edits } })).json();
+  assert.equal(shipped.result.status, 'BOOKED', JSON.stringify(shipped));
+  assert.equal(shipped.shipment.fulfilled, true);
+  const article = calls.booking[0].articles[0];
+  assert.equal(article.physical_weight, 1200);
+  assert.equal(article.length, '30');
+  assert.match(article.receiver_add_line_1 + article.receiver_add_line_2, /Near Metro Station/);
+
+  // Download label: attachment named after the article number.
+  const dl = await call(`/api/shipments/${shipped.shipment.id}/label?download=1`);
+  assert.equal(dl.status, 200);
+  assert.equal(dl.headers.get('content-disposition'), `attachment; filename="${shipped.shipment.barcode}.pdf"`);
+  assert.match(await dl.text(), /^%PDF/);
+
+  // Re-opening the order shows the booked shipment.
+  const reopened = await (await call(`/api/order?id=${encodeURIComponent(order.id)}`)).json();
+  assert.equal(reopened.shipment.barcode, shipped.shipment.barcode);
+
+  // Shopify admin Print menu: cross-origin request from the extension with the session token.
+  const preflight = await fetch(`${base}/print`, { method: 'OPTIONS', headers: { Origin: 'https://extensions.shopifycdn.com' } });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get('access-control-allow-origin'), 'https://extensions.shopifycdn.com');
+  assert.match(preflight.headers.get('access-control-allow-headers'), /Authorization/);
+  assert.equal((await fetch(`${base}/print?orderIds=${encodeURIComponent(order.id)}`)).status, 401);
+  const printed = await fetch(`${base}/print?orderIds=${encodeURIComponent(order.id)}`, {
+    headers: { Authorization: `Bearer ${sessionToken(SHOP)}`, Origin: 'https://extensions.shopifycdn.com' },
+  });
+  assert.equal(printed.status, 200);
+  assert.equal(printed.headers.get('content-type'), 'application/pdf');
+  assert.equal(printed.headers.get('access-control-allow-origin'), 'https://extensions.shopifycdn.com');
+
+  // Orders without a booking get an explanation instead of a label.
+  const none = await fetch(`${base}/print?orderIds=gid://shopify/Order/999&id_token=${sessionToken(SHOP)}`);
+  assert.match(none.headers.get('content-type'), /html/);
+  assert.match(await none.text(), /No India Post label yet/);
 });

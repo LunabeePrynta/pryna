@@ -1,0 +1,12 @@
+# Shopify admin "Print" menu → India Post labels. Previews and prints the India Post label PDF
+# served by the app's /print route (only one target per print action extension).
+api_version = "2026-07"
+
+[[extensions]]
+name = "India Post labels"
+handle = "indiapost-labels-print"
+type = "ui_extension"
+
+  [[extensions.targeting]]
+  module = "./src/PrintAction.jsx"
+  target = "admin.order-index.selection-print-action.render"

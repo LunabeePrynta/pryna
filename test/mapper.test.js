@@ -5,6 +5,7 @@ import {
   buildLabel,
   chooseArticleType,
   normalizeMobile,
+  sanitizeOverrides,
   pickupScheduleDate,
   splitAddress,
 } from '../src/indiapost/mapper.js';
@@ -98,4 +99,37 @@ test('label payload carries booking data', () => {
   assert.equal(label.booking_office_name, 'Chennai GPO');
   assert.equal(label.size, 'A6');
   assert.equal(label.total_amount, 72);
+});
+
+test('form edits override order data and defaults', () => {
+  const overrides = sanitizeOverrides({
+    receiver: { name: 'Asha K', phone: '9123456789', zip: '560001', evil: 'x' },
+    product: 'BUSINESS_PARCEL',
+    weightGrams: '1500.4',
+    dimensions: { length: '25', breadth: '20', height: '12' },
+    codAmount: '999',
+    insuranceValue: '0',
+    unknown: true,
+  });
+  assert.deepEqual(Object.keys(overrides.receiver), ['name', 'zip', 'phone']);
+  assert.equal(overrides.weightGrams, 1500);
+  const { article, errors } = buildArticle(sampleOrder(), sampleSettings({ indiaPost: { ...sampleSettings().indiaPost } }), 'ET214330015IN', overrides);
+  assert.deepEqual(errors, []);
+  assert.equal(article.article_type, 'BUSINESS_PARCEL');
+  assert.equal(article.contract_id, '41367422');
+  assert.equal(article.receiver_name, 'Asha K');
+  assert.equal(article.receiver_pincode, '560001');
+  assert.equal(article.receiver_mobile_no, '9123456789');
+  assert.equal(article.receiver_city, 'Bengaluru', 'untouched fields come from the order');
+  assert.equal(article.physical_weight, 1500);
+  assert.equal(article.height, '12');
+  assert.equal(article.codr_cod, 'COD');
+  assert.equal(article.value_for_codr_cod, 999);
+  assert.equal(article.insurance_type, '');
+});
+
+test('a COD amount of 0 books an unpaid COD order as prepaid', () => {
+  const order = sampleOrder({ financialStatus: 'PENDING', gateways: ['Cash on Delivery (COD)'], outstandingAmount: 1499 });
+  const { article } = buildArticle(order, sampleSettings(), 'ET214330015IN', sanitizeOverrides({ codAmount: 0 }));
+  assert.equal(article.codr_cod, '');
 });

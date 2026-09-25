@@ -16,7 +16,7 @@ import {
   verifyWebhookHmac,
 } from './shopify/auth.js';
 import { createContext } from './services/context.js';
-import { BookingError, labelsPdf, pushOrders } from './services/booking.js';
+import { BookingError, labelsPdf, pushOrders, quoteShipment, shipmentDraft } from './services/booking.js';
 import { handleIndiaPostEvent, lookupTracking, pollAllShops, refreshShipments } from './services/tracking.js';
 import { renderStandalonePage, renderTrackingContent } from './views/track.js';
 
@@ -88,9 +88,25 @@ export function createApp(ctx) {
   });
 
   // ---------- Admin API (App Bridge session token) ----------
-  const api = express.Router();
-  api.use(asyncRoute(async (req, res, next) => {
-    const token = (req.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  // Requests come from the embedded app (same origin) and from admin UI extensions
+  // (cross-origin, e.g. the Print menu), which send the session token as a bearer token.
+  const cors = (req, res, next) => {
+    const origin = req.get('Origin');
+    if (origin && ALLOWED_EXTENSION_ORIGINS.some((re) => re.test(origin))) {
+      res.set({
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+        'Access-Control-Expose-Headers': 'Content-Disposition',
+        Vary: 'Origin',
+      });
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  };
+
+  const authenticate = asyncRoute(async (req, res, next) => {
+    const token = (req.get('Authorization') ?? '').replace(/^Bearer\s+/i, '') || String(req.query.id_token ?? '');
     let shop;
     try {
       ({ shop } = verifySessionToken(token, { apiKey: shopify.apiKey, apiSecret: shopify.apiSecret }));
@@ -110,7 +126,10 @@ export function createApp(ctx) {
     }
     req.shop = shop;
     next();
-  }));
+  });
+
+  const api = express.Router();
+  api.use(cors, authenticate);
 
   api.get('/bootstrap', (req, res) => {
     const settings = ctx.getPublicSettings(req.shop);
@@ -126,8 +145,10 @@ export function createApp(ctx) {
   });
 
   api.get('/orders', asyncRoute(async (req, res) => {
-    const filter = req.query.filter === 'all' ? '' : 'fulfillment_status:unfulfilled status:open';
-    const search = String(req.query.q ?? '').trim();
+    // ?ids=1,2 (numeric ids or gids) lists exactly those orders — used by the Shopify admin links.
+    const ids = parseOrderIds(req.query.ids).map((gid) => `id:${gid.split('/').pop()}`);
+    const filter = ids.length || req.query.filter === 'all' ? '' : 'fulfillment_status:unfulfilled status:open';
+    const search = ids.length ? ids.join(' OR ') : String(req.query.q ?? '').trim();
     const query = [filter, search].filter(Boolean).join(' ');
     const orders = await ctx.adminFor(req.shop).recentOrders({ first: 50, query });
     const shipments = new Map(db.listShipmentsForOrders(req.shop, orders.map((o) => o.id)).map((s) => [s.order_id, s]));
@@ -156,6 +177,42 @@ export function createApp(ctx) {
     res.json({ results: await pushOrders(ctx, req.shop, ids) });
   }));
 
+  // "Create shipment" form: prefilled values, validation, rate quote and booking for one order.
+  const orderIdFrom = (value) => {
+    const [id] = parseOrderIds(value);
+    if (!id) throw new BookingError('A valid order id is required');
+    return id;
+  };
+
+  api.get('/order', asyncRoute(async (req, res) => {
+    const draft = await shipmentDraft(ctx, req.shop, orderIdFrom(req.query.id));
+    res.json({ ...draft, shipment: draft.shipment ? publicShipment(draft.shipment) : null });
+  }));
+
+  api.post('/order/validate', asyncRoute(async (req, res) => {
+    const draft = await shipmentDraft(ctx, req.shop, orderIdFrom(req.body?.orderId), req.body?.overrides);
+    res.json({ errors: draft.errors, articleType: draft.articleType });
+  }));
+
+  api.post('/order/quote', asyncRoute(async (req, res) => {
+    res.json(await quoteShipment(ctx, req.shop, orderIdFrom(req.body?.orderId), req.body?.overrides));
+  }));
+
+  api.post('/order/ship', asyncRoute(async (req, res) => {
+    const orderId = orderIdFrom(req.body?.orderId);
+    const [result] = await pushOrders(ctx, req.shop, [orderId], { overrides: { [orderId]: req.body?.overrides } });
+    const shipment = db.getShipmentByOrder(req.shop, orderId);
+    res.json({ result, shipment: shipment ? publicShipment(shipment) : null });
+  }));
+
+  api.get('/shipments/:id/label', asyncRoute(async (req, res) => {
+    const shipment = db.getShipment(req.shop, Number(req.params.id));
+    if (!shipment) return res.status(404).json({ error: 'Not found' });
+    const pdf = await labelsPdf(ctx, req.shop, [shipment.id]);
+    const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+    res.type('application/pdf').set('Content-Disposition', `${disposition}; filename="${shipment.barcode}.pdf"`).send(pdf);
+  }));
+
   api.get('/shipments', (req, res) => {
     res.json({ shipments: db.listShipments(req.shop, { limit: 200 }).map(publicShipment) });
   });
@@ -176,7 +233,8 @@ export function createApp(ctx) {
   api.post('/labels', asyncRoute(async (req, res) => {
     const ids = (req.body?.shipmentIds ?? []).map(Number).filter(Boolean);
     const pdf = await labelsPdf(ctx, req.shop, ids);
-    res.type('application/pdf').set('Content-Disposition', 'inline; filename="india-post-labels.pdf"').send(pdf);
+    const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+    res.type('application/pdf').set('Content-Disposition', `${disposition}; filename="india-post-labels.pdf"`).send(pdf);
   }));
 
   api.get('/settings', (req, res) => res.json({ settings: ctx.getPublicSettings(req.shop) }));
@@ -213,6 +271,20 @@ export function createApp(ctx) {
 
   app.use('/api', api);
 
+  // Label document for the "India Post label" entry in the Shopify admin Print menu.
+  app.options('/print', cors);
+  app.get('/print', cors, authenticate, asyncRoute(async (req, res) => {
+    const orderIds = parseOrderIds(req.query.orderIds);
+    const shipments = db.listShipmentsForOrders(req.shop, orderIds).filter((s) => s.booked_at);
+    if (!shipments.length) {
+      return res
+        .type('html')
+        .send(renderPrintMessage('No India Post label yet', 'Create the India Post shipment first: More actions → Create India Post shipment.'));
+    }
+    const pdf = await labelsPdf(ctx, req.shop, shipments.map((s) => s.id));
+    res.type('application/pdf').set('Content-Disposition', 'inline; filename="india-post-labels.pdf"').send(pdf);
+  }));
+
   // ---------- Public tracking (storefront app proxy + standalone) ----------
   const trackLimiter = rateLimiter({ windowMs: 60_000, max: 30 });
 
@@ -247,6 +319,25 @@ export function createApp(ctx) {
   });
 
   return app;
+}
+
+const ALLOWED_EXTENSION_ORIGINS = [/^https:\/\/extensions\.shopifycdn\.com$/, /^https:\/\/admin\.shopify\.com$/, /^https:\/\/[a-z0-9-]+\.myshopify\.com$/];
+
+/** Accepts gids, numeric ids, comma separated strings or arrays (ids[]=…) → order gids. */
+export function parseOrderIds(value) {
+  const list = (Array.isArray(value) ? value : String(value ?? '').split(','))
+    .map((v) => String(v).trim())
+    .filter(Boolean);
+  const gids = list
+    .map((v) => (/^\d+$/.test(v) ? `gid://shopify/Order/${v}` : v))
+    .filter((v) => /^gid:\/\/shopify\/Order\/\d+$/.test(v));
+  return [...new Set(gids)].slice(0, 250);
+}
+
+function renderPrintMessage(title, text) {
+  const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title></head>
+<body style="font:16px/1.5 system-ui,sans-serif;padding:32px"><h1 style="font-size:20px">${esc(title)}</h1><p>${esc(text)}</p></body></html>`;
 }
 
 function publicShipment(s) {

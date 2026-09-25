@@ -15,5 +15,8 @@
   },
   "dependencies": {
     "express": "^5.2.1"
-  }
+  },
+  "workspaces": [
+    "extensions/*"
+  ]
 }

@@ -3,7 +3,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { buildBarcode, parseSeriesBoundary } from '../indiapost/barcode.js';
-import { buildArticle, buildLabel } from '../indiapost/mapper.js';
+import { buildArticle, buildLabel, isDocument, sanitizeOverrides } from '../indiapost/mapper.js';
 import { syncShopifyMetafields } from './tracking.js';
 
 const BOOKING_CHUNK = 500;
@@ -38,8 +38,9 @@ function result(shipment, extra = {}) {
 /**
  * Books the given Shopify orders (GraphQL ids) with India Post.
  * Orders already booked are skipped; failed ones can be pushed again and reuse their AWB.
+ * `overrides` maps order id → edits from the "Create shipment" form (see sanitizeOverrides).
  */
-export async function pushOrders(ctx, shop, orderIds) {
+export async function pushOrders(ctx, shop, orderIds, { overrides = {} } = {}) {
   const { db, logger } = ctx;
   const settings = ctx.getSettings(shop);
   const admin = ctx.adminFor(shop);
@@ -74,7 +75,7 @@ export async function pushOrders(ctx, shop, orderIds) {
           status: 'PENDING',
         });
       }
-      const { article, errors } = buildArticle(order, settings, shipment.barcode);
+      const { article, errors } = buildArticle(order, settings, shipment.barcode, sanitizeOverrides(overrides[orderId]));
       db.updateShipment(shipment.id, {
         article,
         article_type: article.article_type,
@@ -209,4 +210,95 @@ export async function labelsPdf(ctx, shop, shipmentIds) {
   }
   const settings = ctx.getSettings(shop);
   return ctx.indiaPostFor(shop, settings).createLabels(shipments.map((s) => labelPayload(s, settings)));
+}
+
+const PLACEHOLDER_BARCODE = 'XX000000000IN';
+
+/**
+ * Everything the "Create shipment" form needs: the order, the shipment (if any) and the
+ * values the app would book with, plus problems India Post would reject.
+ */
+export async function shipmentDraft(ctx, shop, orderId, overrides) {
+  const settings = ctx.getSettings(shop);
+  const order = await ctx.adminFor(shop).getOrder(orderId);
+  if (!order) throw new BookingError('Order not found in Shopify');
+  const clean = sanitizeOverrides(overrides);
+  const { article, errors } = buildArticle(order, settings, PLACEHOLDER_BARCODE, clean);
+  const address = { ...(order.shippingAddress ?? {}), ...(clean.receiver ?? {}) };
+  return {
+    order: {
+      id: order.id,
+      name: order.name,
+      createdAt: order.createdAt,
+      email: order.email,
+      total: order.totalAmount,
+      currency: order.currency,
+      financialStatus: order.financialStatus,
+      gateways: order.gateways,
+      weightGrams: order.totalWeightGrams,
+    },
+    form: {
+      receiver: {
+        name: address.name ?? '',
+        company: address.company ?? '',
+        address1: address.address1 ?? '',
+        address2: address.address2 ?? '',
+        city: address.city ?? '',
+        province: address.province ?? '',
+        zip: address.zip ?? '',
+        phone: article.receiver_mobile_no || address.phone || '',
+      },
+      product: clean.product ?? settings.product,
+      weightGrams: article.physical_weight,
+      dimensions: {
+        length: Number(article.length),
+        breadth: Number(article.breadth_diameter),
+        height: Number(article.height),
+      },
+      codAmount: Number(article.value_for_codr_cod) || 0,
+      insuranceValue: Number(article.value_of_insurance) || 0,
+    },
+    articleType: article.article_type,
+    handover: { mode: settings.mode, officeId: settings.officeId, sender: settings.sender },
+    errors,
+    shipment: ctx.db.getShipmentByOrder(shop, orderId),
+  };
+}
+
+/** Tariff for the shipment as it would be booked (Speed Post and Business Parcel). */
+export async function quoteShipment(ctx, shop, orderId, overrides) {
+  const settings = ctx.getSettings(shop);
+  const order = await ctx.adminFor(shop).getOrder(orderId);
+  if (!order) throw new BookingError('Order not found in Shopify');
+  const { article, errors } = buildArticle(order, settings, PLACEHOLDER_BARCODE, sanitizeOverrides(overrides));
+  const blocking = errors.filter((e) => /pincode|Weight|Length|Breadth|Height/.test(e));
+  if (blocking.length) throw new BookingError(blocking.join('; '));
+
+  const client = ctx.indiaPostFor(shop, settings);
+  const params = {
+    weight: article.physical_weight,
+    sourcePincode: article.sender_pincode,
+    destinationPincode: article.receiver_pincode,
+    length: article.length,
+    width: article.breadth_diameter,
+    height: article.height,
+    ins: article.value_of_insurance || undefined,
+  };
+  let tariff;
+  if (article.article_type.startsWith('SP_INLAND_')) tariff = await client.speedPostTariff(params);
+  else if (article.article_type === 'BUSINESS_PARCEL') tariff = await client.businessParcelTariff(params);
+  else return { available: false, articleType: article.article_type, message: 'Rates for this product are shown after booking.' };
+
+  return {
+    available: true,
+    articleType: article.article_type,
+    document: isDocument(article.article_type),
+    chargeableWeight: tariff.chargeable_weight,
+    baseTariff: tariff.base_tariff,
+    vasCharges: tariff.vas_charges,
+    tax: tariff.total_tax,
+    total: tariff.final_amount,
+    currency: tariff.currency ?? 'INR',
+    deliveryType: tariff.delivery_type,
+  };
 }

@@ -18,6 +18,37 @@ Pincode Search, Bulk Booking, Address Label, Bulk Tracking and Webhook APIs.
 | 6. Customer tracking page | Anyone can enter an article number at `https://<your-store>/apps/track` and see its status and full timeline. The page opens inside your theme through the app proxy. |
 | 7. Customer profile | The order's status is saved in the `indiapost.tracking` metafield and the customer's in `indiapost.latest_shipment`. The order page in the customer's account also shows the fulfillment, tracking link and delivery status. |
 
+## Using it in Shopify admin
+
+**From the app** (Apps → India Post Shipping → Orders):
+
+- The list shows your latest unfulfilled orders and each one's India Post status.
+- **Create shipment** opens a form filled in from the order:
+  - Receiver name, mobile and address, all editable
+  - Product, weight and size (L × B × H)
+  - Cash-on-delivery amount and insured value
+  - How the parcel reaches India Post (drop-off or pickup)
+
+  Problems are flagged as you type, before anything goes to India Post. **Get rate** asks India Post for the
+  price (Speed Post and Business Parcel). **Create shipment** books it and shows the article number, with
+  **Download label** (saved as `<article number>.pdf`) and **Print label** buttons.
+- If India Post rejects an order, it shows **Fix & retry** with India Post's reasons. The retry reuses the same
+  article number.
+- To handle many orders at once, tick them and use **Book selected**. This books them with the default
+  settings. **Download labels** then gives you one PDF for all the booked orders you ticked.
+
+**From Shopify's own order pages** (extensions in `extensions/`):
+
+| Where | What it does |
+| --- | --- |
+| Order page → *More actions* → **Create India Post shipment** | Opens the app on that order's shipment form. |
+| Orders list → select orders → *More actions* → **Book with India Post** | Opens the app with those orders ticked, ready to book and download labels. |
+| Order page → *Print* → **India Post label** | Shows the label PDF in Shopify's print preview. |
+| Orders list → select orders → *Print* → **India Post labels** | Prints the labels of all the booked orders you selected. |
+
+Run `shopify app deploy` to publish these. It installs the extensions' packages, which are set up as npm
+workspaces, and gives each extension its `uid`.
+
 ## Project layout
 
 ```
@@ -37,8 +68,13 @@ src/
     booking.js           Push orders → book → label → fulfil
     tracking.js          Store events, sync Shopify, public lookup, polling
   views/
-    admin.html           Embedded admin UI (App Bridge)
+    admin.html           Embedded admin UI (App Bridge): orders, create-shipment form, labels, settings
     track.js             Customer tracking page
+extensions/
+  create-shipment-link/  Order page "More actions" link → shipment form
+  book-orders-link/      Orders list bulk action → book selected orders
+  label-print/           Order page Print menu → India Post label
+  label-print-bulk/      Orders list Print menu → labels for selected orders
 test/                    node:test suites incl. an end-to-end flow with faked Shopify + India Post
 shopify.app.toml         Scopes, webhooks, app proxy
 ```
