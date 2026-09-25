@@ -1,34 +1,35 @@
-<div class="label">
-  <div class="label-header">
-    <img class="shop-logo" src="https://cdn.shopify.com/s/files/1/0862/8246/9671/files/logo.svg" alt="{{ shop.name }}" width="150" style="width:150px; max-width:150px; height:auto;">
+<div style="width:3.64in; min-height:5.64in; margin:auto; padding:0; display:flex; flex-direction:column; font-family:Arial, Helvetica, sans-serif; font-size:9.5px; color:#111; box-sizing:border-box;">
+
+  <div style="text-align:center;">
+    <img src="https://cdn.shopify.com/s/files/1/0862/8246/9671/files/logo.svg" alt="{{ shop.name }}" width="150" style="width:150px; max-width:150px; height:auto;">
   </div>
 
-  <div class="customer-id-block">
-    <p class="customer-id">
+  <div style="text-align:center; margin-top:0.6em;">
+    <p style="margin:0; font-size:1.1em; font-weight:bold; letter-spacing:0.04em;">
       Customer ID : 1160026976
     </p>
   </div>
 
-  <hr>
+  <hr style="height:0.045em; border:none; background-color:#111; color:#111; margin:0.5em 0;">
 
-  <div class="from-block">
-    <p class="block-label to-uppercase">
+  <div style="padding:0.1em 0;">
+    <p style="margin:0 0 0.35em; font-weight:bold; font-size:0.85em; color:#555; text-transform:uppercase;">
       From
     </p>
-    <p class="from-detail">
+    <p style="margin:0; font-size:1em; line-height:1.5;">
       {{ shop.name }}<br>
       {{ shop_address.summary }}
       {% if shop.phone != blank %}<br>Ph: {{ shop.phone }}{% endif %}
     </p>
   </div>
 
-  <hr class="subdued-separator">
+  <hr style="height:0.03em; border:none; background-color:#ccc; color:#ccc; margin:0.5em 0;">
 
-  <div class="to-block">
-    <p class="block-label to-uppercase">
+  <div style="padding:0.3em 0 0.2em;">
+    <p style="margin:0 0 0.35em; font-weight:bold; font-size:0.85em; color:#555; text-transform:uppercase;">
       Ship to
     </p>
-    <p class="to-detail">
+    <p style="margin:0; font-size:1.6em; line-height:1.45; font-weight:500;">
       <strong>{{ shipping_address.name }}</strong><br>
       {{ shipping_address.address1 }}{% if shipping_address.address2 != blank %}, {{ shipping_address.address2 }}{% endif %}<br>
       <strong>{{ shipping_address.city_province_zip }}</strong><br>
@@ -37,186 +38,42 @@
     </p>
   </div>
 
-  <div class="meta-block">
-    <div class="meta-row">
-      <span class="meta-label">Order</span>
-      <span class="meta-value">{{ order.name }}</span>
+  <div style="margin-top:0.7em; padding:0.5em 0.6em; border:0.04em solid #111; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; padding:0.15em 0; font-size:1em;">
+      <span style="color:#555;">Order</span>
+      <span style="font-weight:bold; text-align:right;">{{ order.name }}</span>
     </div>
-    <div class="meta-row">
-      <span class="meta-label">Date</span>
-      <span class="meta-value">{{ order.created_at | date: format: 'date' }}</span>
+    <div style="display:flex; justify-content:space-between; padding:0.15em 0; font-size:1em;">
+      <span style="color:#555;">Date</span>
+      <span style="font-weight:bold; text-align:right;">{{ order.created_at | date: format: 'date' }}</span>
     </div>
     {% if order.financial_status != blank %}
-      <div class="meta-row">
-        <span class="meta-label">Payment</span>
-        <span class="meta-value to-uppercase">{{ order.financial_status | replace: '_', ' ' }}</span>
+      <div style="display:flex; justify-content:space-between; padding:0.15em 0; font-size:1em;">
+        <span style="color:#555;">Payment</span>
+        <span style="font-weight:bold; text-align:right; text-transform:uppercase;">{{ order.financial_status | replace: '_', ' ' }}</span>
       </div>
     {% endif %}
     {% if order.total_price != blank %}
-      <div class="meta-row">
-        <span class="meta-label">Amount</span>
-        <span class="meta-value">{{ order.total_price | money_with_currency }}</span>
+      <div style="display:flex; justify-content:space-between; padding:0.15em 0; font-size:1em;">
+        <span style="color:#555;">Amount</span>
+        <span style="font-weight:bold; text-align:right;">{{ order.total_price | money_with_currency }}</span>
       </div>
     {% endif %}
   </div>
 
-  <div class="spacer"></div>
+  <div style="flex-grow:1;"></div>
 
-  <hr>
+  <hr style="height:0.045em; border:none; background-color:#111; color:#111; margin:0.5em 0;">
 
-  <div class="return-block">
-    <p class="return-label to-uppercase">Return Address</p>
-    <p class="return-detail">
+  <div style="margin-top:0.4em;">
+    <p style="margin:0; font-size:0.8em; font-weight:bold; color:#555; text-transform:uppercase;">Return Address</p>
+    <p style="margin:0.2em 0 0; font-size:0.9em; line-height:1.4;">
       {{ shop.name }}, {{ shop_address.summary }}
     </p>
   </div>
 
-  <div class="footer">
+  <div style="margin-top:0.4em; text-align:right; font-size:0.8em; color:#555;">
     Page 1 of 1
   </div>
+
 </div>
-
-<style type="text/css">
-  @page {
-    size: 4in 6in;
-    margin: 0.18in;
-  }
-
-  * {
-    box-sizing: border-box;
-  }
-
-  body {
-    margin: 0;
-  }
-
-  .label {
-    width: 3.64in;
-    min-height: 5.64in;
-    margin: auto;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 9.5px;
-    color: #111;
-  }
-
-  .to-uppercase {
-    text-transform: uppercase;
-  }
-
-  p {
-    margin: 0;
-  }
-
-  hr {
-    height: 0.045em;
-    border: none;
-    background-color: #111;
-    color: #111;
-    margin: 0.5em 0;
-  }
-
-  .subdued-separator {
-    height: 0.03em;
-    background-color: #ccc;
-    color: #ccc;
-  }
-
-  .label-header {
-    text-align: center;
-  }
-
-  .shop-logo {
-    width: 150px;
-    max-width: 100%;
-    height: auto;
-  }
-
-  .customer-id-block {
-    text-align: center;
-    margin-top: 0.6em;
-  }
-
-  .customer-id {
-    font-size: 1.1em;
-    font-weight: bold;
-    letter-spacing: 0.04em;
-  }
-
-  .block-label {
-    font-weight: bold;
-    font-size: 0.85em;
-    color: #555;
-    margin-bottom: 0.35em;
-  }
-
-  .from-block {
-    padding: 0.1em 0;
-  }
-
-  .from-detail {
-    font-size: 1em;
-    line-height: 1.5;
-  }
-
-  .to-block {
-    padding: 0.3em 0 0.2em;
-  }
-
-  .to-detail {
-    font-size: 1.6em;
-    line-height: 1.45;
-    font-weight: 500;
-  }
-
-  .meta-block {
-    margin-top: 0.7em;
-    padding: 0.5em 0.6em;
-    border: 0.04em solid #111;
-  }
-
-  .meta-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.15em 0;
-    font-size: 1em;
-  }
-
-  .meta-label {
-    color: #555;
-  }
-
-  .meta-value {
-    font-weight: bold;
-    text-align: right;
-  }
-
-  .spacer {
-    flex-grow: 1;
-  }
-
-  .return-block {
-    margin-top: 0.4em;
-  }
-
-  .return-label {
-    font-size: 0.8em;
-    font-weight: bold;
-    color: #555;
-  }
-
-  .return-detail {
-    margin-top: 0.2em;
-    font-size: 0.9em;
-    line-height: 1.4;
-  }
-
-  .footer {
-    margin-top: 0.4em;
-    text-align: right;
-    font-size: 0.8em;
-    color: #555;
-  }
-</style>
