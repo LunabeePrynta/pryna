@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="shopify-api-key" content="%SHOPIFY_API_KEY%">
+<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+<title>India Post Shipping</title>
+<style>
+  :root { --bg:#f1f1f1; --card:#fff; --fg:#303030; --muted:#616161; --line:#e3e3e3; --primary:#303030; --primary-fg:#fff;
+    --ok:#cdfed4; --ok-fg:#014b10; --info:#e0f0ff; --info-fg:#00316a; --warn:#fff1c7; --warn-fg:#5e4200; --bad:#fee9e8; --bad-fg:#8e0b21; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:1200px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:4px 0 12px; }
+  h2 { font-size:15px; margin:0 0 12px; }
+  .tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
+  .tabs button { border:0; background:transparent; padding:8px 12px; border-radius:8px; font-weight:600; color:var(--muted); cursor:pointer; }
+  .tabs button[aria-selected=true] { background:var(--card); color:var(--fg); box-shadow:0 1px 0 rgba(0,0,0,.08); }
+  .card { background:var(--card); border-radius:12px; padding:16px; box-shadow:0 1px 0 rgba(0,0,0,.07); margin-bottom:12px; }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .toolbar .spacer { flex:1; }
+  button.btn { border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:8px; padding:6px 12px; font-weight:600; cursor:pointer; }
+  button.btn.primary { background:var(--primary); color:var(--primary-fg); border-color:var(--primary); }
+  button.btn:disabled { opacity:.5; cursor:default; }
+  input, select { font:inherit; padding:6px 10px; border:1px solid #8a8a8a; border-radius:8px; background:#fff; color:var(--fg); min-width:0; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; white-space:nowrap; }
+  th { color:var(--muted); font-weight:600; font-size:12px; }
+  td.wrap { white-space:normal; min-width:180px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; background:#ebebeb; }
+  .badge.DELIVERED { background:var(--ok); color:var(--ok-fg); }
+  .badge.BOOKED, .badge.IN_TRANSIT, .badge.OUT_FOR_DELIVERY { background:var(--info); color:var(--info-fg); }
+  .badge.ON_HOLD, .badge.BOOKING, .badge.PENDING { background:var(--warn); color:var(--warn-fg); }
+  .badge.ERROR, .badge.RETURNED { background:var(--bad); color:var(--bad-fg); }
+  .muted { color:var(--muted); }
+  .err { color:var(--bad-fg); font-size:12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+  label.field { display:flex; flex-direction:column; gap:4px; font-weight:600; font-size:13px; }
+  label.field small { font-weight:400; color:var(--muted); }
+  label.check { display:flex; gap:8px; align-items:center; }
+  .banner { padding:12px 14px; border-radius:10px; background:var(--warn); color:var(--warn-fg); margin-bottom:12px; }
+  .banner.info { background:var(--info); color:var(--info-fg); }
+  code { background:#f3f3f3; padding:1px 5px; border-radius:4px; word-break:break-all; }
+  a { color:#005bd3; }
+  .events li { margin-bottom:6px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>India Post Shipping</h1>
+  <div id="setup-banner" class="banner" hidden>Finish <a href="#" data-tab-link="settings">Settings</a> (India Post login, customer &amp; contract ids, AWB series, sender address) before pushing orders.</div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="orders" aria-selected="true">Orders</button>
+    <button role="tab" data-tab="shipments" aria-selected="false">Shipments</button>
+    <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+  </nav>
+
+  <!-- Orders -->
+  <section id="tab-orders">
+    <div class="card">
+      <div class="toolbar">
+        <select id="order-filter" aria-label="Filter">
+          <option value="unfulfilled">Unfulfilled orders</option>
+          <option value="all">All recent orders</option>
+        </select>
+        <input id="order-search" type="search" placeholder="Search orders" aria-label="Search orders">
+        <button class="btn" id="reload-orders">Refresh</button>
+        <span class="spacer"></span>
+        <span id="selected-count" class="muted"></span>
+        <button class="btn primary" id="push-selected" disabled>Push to India Post</button>
+        <button class="btn" id="labels-selected" disabled>Print labels</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th><input type="checkbox" id="select-all" aria-label="Select all"></th>
+            <th>Order</th><th>Date</th><th>Customer</th><th>Pincode</th><th>Total</th><th>Weight</th><th>Payment</th>
+            <th>India Post</th><th>Article no.</th><th></th>
+          </tr></thead>
+          <tbody id="orders-body"><tr><td colspan="11" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Shipments -->
+  <section id="tab-shipments" hidden>
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn" id="reload-shipments">Reload</button>
+        <button class="btn" id="refresh-tracking">Refresh tracking from India Post</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Order</th><th>Article no.</th><th>Type</th><th>Status</th><th>Latest event</th><th>Tariff</th><th></th></tr></thead>
+          <tbody id="shipments-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" id="shipment-detail" hidden></div>
+  </section>
+
+  <!-- Settings -->
+  <section id="tab-settings" hidden>
+    <form id="settings-form">
+      <div class="card">
+        <h2>India Post account</h2>
+        <div class="grid">
+          <label class="field">Username<input name="indiaPost.username" autocomplete="off"></label>
+          <label class="field">Password<input name="indiaPost.password" type="password" autocomplete="new-password"></label>
+          <label class="field">Bulk customer id<small>10 digits</small><input name="indiaPost.bulkCustomerId" inputmode="numeric"></label>
+        </div>
+        <h2 style="margin-top:16px">Contract ids</h2>
+        <div class="grid">
+          <label class="field">Speed Post (doc / parcel)<input name="indiaPost.contracts.SPEED_POST" inputmode="numeric"></label>
+          <label class="field">Business Parcel<input name="indiaPost.contracts.BUSINESS_PARCEL" inputmode="numeric"></label>
+          <label class="field">24 hr Speed Post Doc<input name="indiaPost.contracts.24_SPEEDPOST_DOC" inputmode="numeric"></label>
+          <label class="field">24 hr Parcel Special<input name="indiaPost.contracts.24_SPP_PARSPL" inputmode="numeric"></label>
+          <label class="field">48 hr Speed Post Doc<input name="indiaPost.contracts.48_SPEEDPOST_DOC" inputmode="numeric"></label>
+        </div>
+        <div class="toolbar" style="margin-top:12px"><button type="button" class="btn" id="test-connection">Test connection</button><span id="test-result" class="muted"></span></div>
+      </div>
+
+      <div class="card">
+        <h2>Article numbers (AWB series)</h2>
+        <div class="grid">
+          <label class="field">Series start<small>e.g. ET21433001XIN</small><input name="barcode.seriesStart"></label>
+          <label class="field">Series end<small>e.g. ET21434000XIN</small><input name="barcode.seriesEnd"></label>
+        </div>
+        <p id="series-usage" class="muted"></p>
+      </div>
+
+      <div class="card">
+        <h2>Service</h2>
+        <div class="grid">
+          <label class="field">Product<select name="product" id="product-select"></select></label>
+          <label class="field">Handover<select name="mode"><option value="DROPOFF">Drop-off at post office</option><option value="PICKUP">Pickup from my address</option></select></label>
+          <label class="field">Pickup / drop-off office id<small>8 digits — use the finder below</small><input name="officeId" inputmode="numeric"></label>
+          <label class="field">Pickup slot<select name="pickupSlot"><option>10:00-13:00</option><option>13:00-16:00</option></select></label>
+        </div>
+        <div class="toolbar" style="margin-top:12px">
+          <input id="office-pin" placeholder="Pincode" inputmode="numeric" maxlength="6" style="width:120px">
+          <button type="button" class="btn" id="find-office">Find offices</button>
+          <select id="office-results" hidden></select>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Sender (return) address</h2>
+        <div class="grid">
+          <label class="field">Name<input name="sender.name"></label>
+          <label class="field">Company<input name="sender.company"></label>
+          <label class="field">Address line 1<input name="sender.address1"></label>
+          <label class="field">Address line 2<input name="sender.address2"></label>
+          <label class="field">Address line 3<input name="sender.address3"></label>
+          <label class="field">City<input name="sender.city"></label>
+          <label class="field">State<input name="sender.state"></label>
+          <label class="field">Pincode<input name="sender.pincode" inputmode="numeric" maxlength="6"></label>
+          <label class="field">Mobile<input name="sender.mobile" inputmode="tel"></label>
+          <label class="field">Email<input name="sender.email" type="email"></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Package defaults</h2>
+        <div class="grid">
+          <label class="field">Default weight (g)<small>Used when products have no weight</small><input name="package.defaultWeightGrams" type="number" min="1"></label>
+          <label class="field">Packaging weight (g)<small>Added to every order</small><input name="package.packagingWeightGrams" type="number" min="0"></label>
+          <label class="field">Parcel shape<select name="package.parcelShape"><option value="NROL">Box / rectangle</option><option value="ROLL">Roll / cylinder</option></select></label>
+          <label class="field">Document L × B × H (cm)<span style="display:flex;gap:4px"><input name="package.doc.length" type="number" step="0.1"><input name="package.doc.breadth" type="number" step="0.1"><input name="package.doc.height" type="number" step="0.1"></span></label>
+          <label class="field">Parcel L × B × H (cm)<span style="display:flex;gap:4px"><input name="package.parcel.length" type="number" step="0.1"><input name="package.parcel.breadth" type="number" step="0.1"><input name="package.parcel.height" type="number" step="0.1"></span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Label</h2>
+        <div class="grid">
+          <label class="field">Size<select name="label.size"><option>A6</option><option>A7</option></select></label>
+          <label class="field">Transmission<select name="label.transmissionMode"><option value="S">Surface</option><option value="A">Air</option></select></label>
+          <label class="field">Booking office name<input name="label.bookingOfficeName"></label>
+          <label class="field">Booking office pincode<input name="label.bookingOfficePin" inputmode="numeric" maxlength="6"></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Automation &amp; extras</h2>
+        <label class="check"><input type="checkbox" name="automation.autoPush"> Automatically push new paid / COD orders to India Post</label>
+        <label class="check"><input type="checkbox" name="automation.autoFulfill"> Mark orders fulfilled in Shopify with the India Post tracking number</label>
+        <label class="check"><input type="checkbox" name="automation.notifyCustomer"> Email the customer the shipping confirmation</label>
+        <label class="check"><input type="checkbox" name="cod.enabled"> Book unpaid Cash-on-Delivery orders as COD</label>
+        <label class="check"><input type="checkbox" name="insurance.enabled"> Insure orders worth at least ₹ <input name="insurance.minOrderValue" type="number" min="0" style="width:110px"></label>
+      </div>
+
+      <div class="card">
+        <h2>Tracking</h2>
+        <p>Storefront tracking page: <a id="tracking-page" target="_blank" rel="noopener"></a> — add it to your store menu.</p>
+        <p>Give India Post this webhook URL for real-time events (with your secret): <code id="webhook-url"></code></p>
+      </div>
+
+      <div class="toolbar"><span class="spacer"></span><button class="btn primary" type="submit">Save settings</button></div>
+    </form>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const toast = (msg, isError = false) => (window.shopify?.toast ? shopify.toast.show(msg, { isError }) : alert(msg));
+  const state = { statusLabels: {}, orders: [], selected: new Set(), shipments: [] };
+
+  async function api(path, { method = 'GET', body, raw = false } = {}) {
+    const res = await fetch(`/api${path}`, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (raw && res.ok) return res;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
+  }
+
+  const fmtDate = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+  const badge = (status) => `<span class="badge ${esc(status)}">${esc(state.statusLabels[status] || status)}</span>`;
+
+  // ---- tabs ----
+  function showTab(name) {
+    $$('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    ['orders', 'shipments', 'settings'].forEach((t) => ($(`#tab-${t}`).hidden = t !== name));
+    if (name === 'shipments') loadShipments();
+  }
+  $$('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  $$('[data-tab-link]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); showTab(a.dataset.tabLink); }));
+
+  // ---- orders ----
+  async function loadOrders() {
+    const body = $('#orders-body');
+    body.innerHTML = '<tr><td colspan="11" class="muted">Loading…</td></tr>';
+    try {
+      const params = new URLSearchParams({ filter: $('#order-filter').value, q: $('#order-search').value });
+      const { orders } = await api(`/orders?${params}`);
+      state.orders = orders;
+      state.selected.clear();
+      renderOrders();
+    } catch (err) {
+      body.innerHTML = `<tr><td colspan="11" class="err">${esc(err.message)}</td></tr>`;
+    }
+  }
+
+  function renderOrders() {
+    const body = $('#orders-body');
+    if (!state.orders.length) {
+      body.innerHTML = '<tr><td colspan="11" class="muted">No orders found.</td></tr>';
+    } else {
+      body.innerHTML = state.orders.map((o) => {
+        const s = o.shipment;
+        const errors = s?.errors?.length ? `<div class="err">${s.errors.map(esc).join('<br>')}</div>` : '';
+        const actions = [];
+        if (!s || ['PENDING', 'ERROR'].includes(s.status)) actions.push(`<button class="btn" data-push="${esc(o.id)}">${s ? 'Retry' : 'Push'}</button>`);
+        if (s?.bookedAt) actions.push(`<button class="btn" data-label="${s.id}">Label</button>`);
+        return `<tr>
+          <td><input type="checkbox" data-select="${esc(o.id)}" ${state.selected.has(o.id) ? 'checked' : ''} aria-label="Select ${esc(o.name)}"></td>
+          <td><strong>${esc(o.name)}</strong></td>
+          <td>${esc(fmtDate(o.createdAt))}</td>
+          <td class="wrap">${esc(o.customer)}<div class="muted">${esc(o.city)}</div></td>
+          <td>${esc(o.pincode)}</td>
+          <td>${esc(o.currency)} ${Number(o.total).toFixed(2)}</td>
+          <td>${o.weight ? `${o.weight} g` : '<span class="muted">—</span>'}</td>
+          <td>${esc(String(o.financialStatus || '').replace(/_/g, ' ').toLowerCase())}</td>
+          <td class="wrap">${s ? badge(s.status) : '<span class="muted">Not pushed</span>'}${errors}${s?.lastEvent ? `<div class="muted">${esc(s.lastEvent)}</div>` : ''}</td>
+          <td>${s ? `<code>${esc(s.barcode)}</code>` : ''}</td>
+          <td>${actions.join(' ')}</td>
+        </tr>`;
+      }).join('');
+    }
+    updateSelection();
+  }
+
+  function updateSelection() {
+    const n = state.selected.size;
+    $('#selected-count').textContent = n ? `${n} selected` : '';
+    $('#push-selected').disabled = !n;
+    const bookedSelected = state.orders.filter((o) => state.selected.has(o.id) && o.shipment?.bookedAt);
+    $('#labels-selected').disabled = !bookedSelected.length;
+    $('#select-all').checked = n > 0 && n === state.orders.length;
+  }
+
+  async function push(orderIds, button) {
+    if (button) button.disabled = true;
+    try {
+      const { results } = await api('/orders/push', { method: 'POST', body: { orderIds } });
+      const ok = results.filter((r) => !['ERROR', 'BOOKING'].includes(r.status)).length;
+      const failed = results.length - ok;
+      toast(failed ? `${ok} booked, ${failed} need attention` : `${ok} order(s) booked with India Post`, failed > 0);
+      await loadOrders();
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function openLabels(shipmentIds, button) {
+    if (button) button.disabled = true;
+    try {
+      const res = await api('/labels', { method: 'POST', body: { shipmentIds }, raw: true });
+      const url = URL.createObjectURL(await res.blob());
+      const win = window.open(url, '_blank');
+      if (!win) {
+        const a = Object.assign(document.createElement('a'), { href: url, download: 'india-post-labels.pdf' });
+        document.body.append(a); a.click(); a.remove();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  $('#orders-body').addEventListener('click', (e) => {
+    const pushBtn = e.target.closest('[data-push]');
+    if (pushBtn) return push([pushBtn.dataset.push], pushBtn);
+    const labelBtn = e.target.closest('[data-label]');
+    if (labelBtn) return openLabels([Number(labelBtn.dataset.label)], labelBtn);
+  });
+  $('#orders-body').addEventListener('change', (e) => {
+    const box = e.target.closest('[data-select]');
+    if (!box) return;
+    box.checked ? state.selected.add(box.dataset.select) : state.selected.delete(box.dataset.select);
+    updateSelection();
+  });
+  $('#select-all').addEventListener('change', (e) => {
+    state.selected = new Set(e.target.checked ? state.orders.map((o) => o.id) : []);
+    renderOrders();
+  });
+  $('#push-selected').addEventListener('click', (e) => push([...state.selected], e.currentTarget));
+  $('#labels-selected').addEventListener('click', (e) => {
+    const ids = state.orders.filter((o) => state.selected.has(o.id) && o.shipment?.bookedAt).map((o) => o.shipment.id);
+    openLabels(ids, e.currentTarget);
+  });
+  $('#reload-orders').addEventListener('click', loadOrders);
+  $('#order-filter').addEventListener('change', loadOrders);
+  let searchTimer;
+  $('#order-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(loadOrders, 400); });
+
+  // ---- shipments ----
+  async function loadShipments() {
+    try {
+      const { shipments } = await api('/shipments');
+      state.shipments = shipments;
+      $('#shipments-body').innerHTML = shipments.length
+        ? shipments.map((s) => `<tr>
+            <td><strong>${esc(s.orderName)}</strong></td>
+            <td><code>${esc(s.barcode)}</code></td>
+            <td>${esc(s.articleType || '')}</td>
+            <td>${badge(s.status)}</td>
+            <td class="wrap">${esc(s.lastEvent || '')}<div class="muted">${esc(fmtDate(s.lastEventAt))}</div></td>
+            <td>${s.tariff != null ? `₹ ${esc(s.tariff)}` : ''}</td>
+            <td><button class="btn" data-detail="${s.id}">Details</button> ${s.bookedAt ? `<button class="btn" data-label="${s.id}">Label</button>` : ''}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="7" class="muted">No shipments yet.</td></tr>';
+    } catch (err) {
+      toast(err.message, true);
+    }
+  }
+
+  $('#shipments-body').addEventListener('click', async (e) => {
+    const labelBtn = e.target.closest('[data-label]');
+    if (labelBtn) return openLabels([Number(labelBtn.dataset.label)], labelBtn);
+    const detailBtn = e.target.closest('[data-detail]');
+    if (!detailBtn) return;
+    const { shipment, events } = await api(`/shipments/${detailBtn.dataset.detail}`);
+    const box = $('#shipment-detail');
+    box.hidden = false;
+    box.innerHTML = `<h2>${esc(shipment.orderName)} · <code>${esc(shipment.barcode)}</code> ${badge(shipment.status)}</h2>
+      ${shipment.errors?.length ? `<div class="err">${shipment.errors.map(esc).join('<br>')}</div>` : ''}
+      <div class="toolbar"><button class="btn" data-refresh="${shipment.id}">Refresh tracking</button></div>
+      ${events.length ? `<ul class="events">${events.map((ev) => `<li><strong>${esc(ev.description)}</strong> — ${esc(ev.office || '')}
+        <span class="muted">${esc(fmtDate(ev.happened_at))}${ev.remarks ? ` · ${esc(ev.remarks)}` : ''}</span></li>`).join('')}</ul>`
+        : '<p class="muted">No tracking events yet.</p>'}`;
+    box.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  $('#shipment-detail').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-refresh]');
+    if (!btn) return;
+    btn.disabled = true;
+    try {
+      const r = await api('/shipments/refresh', { method: 'POST', body: { shipmentIds: [Number(btn.dataset.refresh)] } });
+      toast(`${r.newEvents} new event(s)`);
+      await loadShipments();
+      $(`[data-detail="${btn.dataset.refresh}"]`)?.click();
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('#reload-shipments').addEventListener('click', loadShipments);
+  $('#refresh-tracking').addEventListener('click', async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      const r = await api('/shipments/refresh', { method: 'POST', body: {} });
+      toast(`Checked ${r.checked} shipment(s), ${r.newEvents} new event(s)`);
+      loadShipments();
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      e.currentTarget.disabled = false;
+    }
+  });
+
+  // ---- settings ----
+  const getPath = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+  function setPath(obj, path, value) {
+    const keys = path.split('.');
+    let o = obj;
+    keys.slice(0, -1).forEach((k) => (o = o[k] ??= {}));
+    o[keys.at(-1)] = value;
+  }
+
+  function fillSettings(settings) {
+    $$('#settings-form [name]').forEach((el) => {
+      const value = getPath(settings, el.name);
+      if (el.type === 'checkbox') el.checked = Boolean(value);
+      else el.value = value ?? '';
+    });
+  }
+
+  function readSettings() {
+    const out = {};
+    $$('#settings-form [name]').forEach((el) => {
+      let value = el.type === 'checkbox' ? el.checked : el.value.trim();
+      if (el.type === 'number' && value !== '') value = Number(value);
+      setPath(out, el.name, value);
+    });
+    return out;
+  }
+
+  function isConfigured(s) {
+    return Boolean(s.indiaPost.username && s.indiaPost.password && s.indiaPost.bulkCustomerId && s.barcode.seriesStart && s.barcode.seriesEnd && s.officeId && s.sender.pincode);
+  }
+
+  function showSeries(series) {
+    $('#series-usage').textContent = series ? `${series.remaining} of ${series.total} article numbers remaining.` : '';
+  }
+
+  $('#settings-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const { settings } = await api('/settings', { method: 'PUT', body: { settings: readSettings() } });
+      fillSettings(settings);
+      $('#setup-banner').hidden = isConfigured(settings);
+      const boot = await api('/bootstrap');
+      showSeries(boot.series);
+      toast('Settings saved');
+    } catch (err) {
+      toast(err.message, true);
+    }
+  });
+
+  $('#test-connection').addEventListener('click', async () => {
+    $('#test-result').textContent = 'Testing… (save first if you changed the login)';
+    try {
+      const r = await api('/settings/test', { method: 'POST' });
+      $('#test-result').textContent = `${r.message}${r.offices?.length ? ` · ${r.offices.length} delivery office(s) at sender pincode` : ''}`;
+    } catch (err) {
+      $('#test-result').textContent = err.message;
+    }
+  });
+
+  $('#find-office').addEventListener('click', async () => {
+    const select = $('#office-results');
+    try {
+      const { offices } = await api(`/pincode/${encodeURIComponent($('#office-pin').value.trim())}`);
+      select.innerHTML = `<option value="">${offices.length ? 'Choose an office…' : 'No eligible offices'}</option>` +
+        offices.map((o) => `<option value="${esc(o.id)}">${esc(o.name)} (${esc(o.id)}) — ${esc(o.city)}</option>`).join('');
+      select.hidden = false;
+    } catch (err) {
+      toast(err.message, true);
+    }
+  });
+  $('#office-results').addEventListener('change', (e) => {
+    if (e.target.value) $('[name="officeId"]').value = e.target.value;
+  });
+
+  // ---- boot ----
+  (async () => {
+    try {
+      const boot = await api('/bootstrap');
+      state.statusLabels = boot.statusLabels;
+      $('#product-select').innerHTML = Object.entries(boot.products).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join('');
+      fillSettings(boot.settings);
+      showSeries(boot.series);
+      $('#setup-banner').hidden = isConfigured(boot.settings);
+      const link = $('#tracking-page');
+      link.href = boot.trackingPageUrl;
+      link.textContent = boot.trackingPageUrl;
+      $('#webhook-url').textContent = boot.webhookUrl;
+      loadOrders();
+    } catch (err) {
+      toast(err.message, true);
+    }
+  })();
+})();
+</script>
+</body>
+</html>
