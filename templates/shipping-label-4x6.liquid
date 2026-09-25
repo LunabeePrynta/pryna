@@ -1,0 +1,315 @@
+<div class="label">
+  <div class="label-header">
+    <p class="shop-name to-uppercase">
+      {{ shop.name }}
+    </p>
+    <p class="label-tag">
+      Shipping Label
+    </p>
+  </div>
+
+  <div class="barcode-block">
+    <div class="barcode" aria-hidden="true">
+      {% for i in (1..46) %}
+        <span class="bar" style="width:{{ i | modulo: 3 | plus: 1 }}px; height:{% if i | modulo: 7 == 0 %}65%{% else %}100%{% endif %};"></span>
+      {% endfor %}
+    </div>
+    <p class="barcode-number">
+      AWB# {{ order.name | remove: '#' }}
+    </p>
+  </div>
+
+  <hr>
+
+  <div class="from-block">
+    <p class="block-label to-uppercase">
+      From
+    </p>
+    <p class="from-detail">
+      {{ shop.name }}
+      {% if shop_address.address1 != blank %}
+        <br>{{ shop_address.address1 }}
+      {% endif %}
+      {% if shop_address.address2 != blank %}
+        , {{ shop_address.address2 }}
+      {% endif %}
+      {% if shop_address.city_province_zip != blank %}
+        <br>{{ shop_address.city_province_zip }}
+      {% endif %}
+      {% if shop_address.country != blank %}
+        <br>{{ shop_address.country }}
+      {% endif %}
+      {% if shop.phone != blank %}
+        <br>Ph: {{ shop.phone }}
+      {% endif %}
+    </p>
+  </div>
+
+  <hr class="subdued-separator">
+
+  <div class="to-block">
+    <p class="block-label to-uppercase">
+      {% if delivery_method.instructions != blank %}
+        Deliver to
+      {% else %}
+        Ship to
+      {% endif %}
+    </p>
+    <p class="to-detail">
+      {% if shipping_address != blank %}
+        <strong>{{ shipping_address.name }}</strong>
+        {% if shipping_address.company != blank %}
+          <br>{{ shipping_address.company }}
+        {% endif %}
+        <br>{{ shipping_address.address1 }}
+        {% if shipping_address.address2 != blank %}
+          , {{ shipping_address.address2 }}
+        {% endif %}
+        {% if shipping_address.city_province_zip != blank %}
+          <br><strong>{{ shipping_address.city_province_zip }}</strong>
+        {% endif %}
+        <br>{{ shipping_address.country }}
+        {% if shipping_address.phone != blank %}
+          <br>Ph: {{ shipping_address.phone }}
+        {% endif %}
+      {% else %}
+        No shipping address
+      {% endif %}
+    </p>
+  </div>
+
+  <div class="meta-block">
+    <div class="meta-row">
+      <span class="meta-label">Order</span>
+      <span class="meta-value">{{ order.name }}</span>
+    </div>
+    {% if order.po_number != blank %}
+      <div class="meta-row">
+        <span class="meta-label">PO number</span>
+        <span class="meta-value">#{{ order.po_number }}</span>
+      </div>
+    {% endif %}
+    <div class="meta-row">
+      <span class="meta-label">Date</span>
+      <span class="meta-value">{{ order.created_at | date: format: 'date' }}</span>
+    </div>
+    {% if order.financial_status != blank %}
+      <div class="meta-row">
+        <span class="meta-label">Payment</span>
+        <span class="meta-value to-uppercase">{{ order.financial_status | replace: '_', ' ' }}</span>
+      </div>
+    {% endif %}
+    {% if order.total_price != blank %}
+      <div class="meta-row">
+        <span class="meta-label">Amount</span>
+        <span class="meta-value">{{ order.total_price | money_with_currency }}</span>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if order.note != blank %}
+    <div class="notes">
+      <p class="block-label to-uppercase">Notes</p>
+      <p class="notes-detail">{{ order.note }}</p>
+    </div>
+  {% endif %}
+
+  {% if delivery_method.instructions != blank %}
+    <div class="notes">
+      <p class="block-label to-uppercase">Delivery instructions</p>
+      <p class="notes-detail">{{ delivery_method.instructions }}</p>
+    </div>
+  {% endif %}
+
+  <div class="spacer"></div>
+
+  <hr>
+
+  <div class="return-block">
+    <p class="return-label to-uppercase">Return Address</p>
+    <p class="return-detail">
+      {{ shop.name }}{% if shop_address.summary != blank %}, {{ shop_address.summary }}{% endif %}
+    </p>
+  </div>
+
+  <div class="footer">
+    Page 1 of 1
+  </div>
+</div>
+
+<style type="text/css">
+  @page {
+    size: 4in 6in;
+    margin: 0.18in;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  .label {
+    width: 3.64in;
+    min-height: 5.64in;
+    margin: auto;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9.5px;
+    color: #111;
+  }
+
+  .to-uppercase {
+    text-transform: uppercase;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  hr {
+    height: 0.045em;
+    border: none;
+    background-color: #111;
+    color: #111;
+    margin: 0.5em 0;
+  }
+
+  .subdued-separator {
+    height: 0.03em;
+    background-color: #ccc;
+    color: #ccc;
+  }
+
+  .label-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .shop-name {
+    font-size: 1.5em;
+    font-weight: bold;
+    letter-spacing: 0.03em;
+  }
+
+  .label-tag {
+    font-size: 0.95em;
+    font-weight: bold;
+    color: #555;
+  }
+
+  .barcode-block {
+    text-align: center;
+    margin-top: 0.6em;
+  }
+
+  .barcode {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    height: 0.55in;
+    gap: 1px;
+  }
+
+  .bar {
+    background-color: #111;
+    display: inline-block;
+  }
+
+  .barcode-number {
+    margin-top: 0.35em;
+    font-size: 1em;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+  }
+
+  .block-label {
+    font-weight: bold;
+    font-size: 0.85em;
+    color: #555;
+    margin-bottom: 0.35em;
+  }
+
+  .from-block {
+    padding: 0.1em 0;
+  }
+
+  .from-detail {
+    font-size: 1em;
+    line-height: 1.5;
+  }
+
+  .to-block {
+    padding: 0.3em 0 0.2em;
+  }
+
+  .to-detail {
+    font-size: 1.6em;
+    line-height: 1.45;
+    font-weight: 500;
+  }
+
+  .meta-block {
+    margin-top: 0.7em;
+    padding: 0.5em 0.6em;
+    border: 0.04em solid #111;
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.15em 0;
+    font-size: 1em;
+  }
+
+  .meta-label {
+    color: #555;
+  }
+
+  .meta-value {
+    font-weight: bold;
+    text-align: right;
+  }
+
+  .notes {
+    margin-top: 0.6em;
+  }
+
+  .notes-detail {
+    margin-top: 0.3em;
+    font-size: 0.95em;
+    line-height: 1.4;
+  }
+
+  .spacer {
+    flex-grow: 1;
+  }
+
+  .return-block {
+    margin-top: 0.4em;
+  }
+
+  .return-label {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: #555;
+  }
+
+  .return-detail {
+    margin-top: 0.2em;
+    font-size: 0.9em;
+    line-height: 1.4;
+  }
+
+  .footer {
+    margin-top: 0.4em;
+    text-align: right;
+    font-size: 0.8em;
+    color: #555;
+  }
+</style>
