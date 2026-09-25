@@ -1,7 +1,7 @@
 <div style="width:3.64in; min-height:5.64in; margin:auto; padding:0; display:flex; flex-direction:column; font-family:Arial, Helvetica, sans-serif; font-size:9.5px; color:#111; box-sizing:border-box;">
 
   <div style="text-align:center;">
-    <img src="https://cdn.shopify.com/s/files/1/0862/8246/9671/files/logo.svg" alt="{{ shop.name }}" width="150" style="width:150px; max-width:150px; height:auto;">
+    <img src="https://cdn.shopify.com/s/files/1/0862/8246/9671/files/logo.svg" alt="{{ shop.name }}" width="50" style="width:50px; max-width:50px; height:auto;">
   </div>
 
   <div style="text-align:center; margin-top:0.6em;">
@@ -17,18 +17,19 @@
       From
     </p>
     <p style="margin:0; font-size:1em; line-height:1.5;">
-      Lunabee, Chalil kizhakke thalappil, Thottathil House, Irumbuzhi PO, Malappuram, 676509<br>
-      Phone : 8861376347
+      {{ shop.name }}<br>
+      {{ shop_address.summary }}
+      {% if shop.phone != blank %}<br>Ph: {{ shop.phone }}{% endif %}
     </p>
   </div>
 
   <hr style="height:0.03em; border:none; background-color:#ccc; color:#ccc; margin:0.5em 0;">
 
   <div style="padding:0.3em 0 0.2em;">
-    <p style="margin:0 0 0.35em; font-weight:bold; font-size:0.85em; color:#555; text-transform:uppercase;">
+    <p style="margin:0 0 0.35em; font-weight:bold; font-size:1em; color:#555; text-transform:uppercase;">
       Ship to
     </p>
-    <p style="margin:0; font-size:1.3em; line-height:1.4; font-weight:500;">
+    <p style="margin:0; font-size:1em; line-height:1.4; font-weight:500;">
       <strong>{{ shipping_address.name }}</strong><br>
       {{ shipping_address.address1 }}{% if shipping_address.address2 != blank %}, {{ shipping_address.address2 }}{% endif %}<br>
       <strong>{{ shipping_address.city_province_zip }}</strong><br>
@@ -67,7 +68,7 @@
   <div style="margin-top:0.4em;">
     <p style="margin:0; font-size:0.8em; font-weight:bold; color:#555; text-transform:uppercase;">Return Address</p>
     <p style="margin:0.2em 0 0; font-size:0.9em; line-height:1.4;">
-      Lunabee, Chalil kizhakke thalappil, Thottathil House, Irumbuzhi PO, Malappuram, 676509, Phone : 8861376347
+      {{ shop.name }}, {{ shop_address.summary }}
     </p>
   </div>
 
