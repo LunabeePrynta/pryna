@@ -1,11 +1,6 @@
 <div class="label">
   <div class="label-header">
-    <p class="shop-name to-uppercase">
-      {{ shop.name }}
-    </p>
-    <p class="label-tag">
-      Shipping Label
-    </p>
+    <img class="shop-logo" src="https://cdn.shopify.com/REPLACE-WITH-YOUR-LOGO-URL.png" alt="{{ shop.name }}">
   </div>
 
   <div class="customer-id-block">
@@ -181,21 +176,12 @@
   }
 
   .label-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
+    text-align: center;
   }
 
-  .shop-name {
-    font-size: 1.5em;
-    font-weight: bold;
-    letter-spacing: 0.03em;
-  }
-
-  .label-tag {
-    font-size: 0.95em;
-    font-weight: bold;
-    color: #555;
+  .shop-logo {
+    max-height: 0.55in;
+    max-width: 2.8in;
   }
 
   .customer-id-block {
