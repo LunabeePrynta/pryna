@@ -8,14 +8,9 @@
     </p>
   </div>
 
-  <div class="barcode-block">
-    <div class="barcode" aria-hidden="true">
-      {% for i in (1..46) %}
-        <span class="bar" style="width:{{ i | modulo: 3 | plus: 1 }}px; height:{% if i | modulo: 7 == 0 %}65%{% else %}100%{% endif %};"></span>
-      {% endfor %}
-    </div>
-    <p class="barcode-number">
-      AWB# {{ order.name | remove: '#' }}
+  <div class="customer-id-block">
+    <p class="customer-id">
+      Customer ID : 1160026976
     </p>
   </div>
 
@@ -203,29 +198,15 @@
     color: #555;
   }
 
-  .barcode-block {
+  .customer-id-block {
     text-align: center;
     margin-top: 0.6em;
   }
 
-  .barcode {
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    height: 0.55in;
-    gap: 1px;
-  }
-
-  .bar {
-    background-color: #111;
-    display: inline-block;
-  }
-
-  .barcode-number {
-    margin-top: 0.35em;
-    font-size: 1em;
+  .customer-id {
+    font-size: 1.1em;
     font-weight: bold;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
   }
 
   .block-label {
