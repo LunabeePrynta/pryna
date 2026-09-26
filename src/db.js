@@ -74,7 +74,14 @@ export function openDatabase(file) {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  migrate(db);
   return createStore(db);
+}
+
+/** Adds columns introduced after the first release to existing databases. */
+function migrate(db) {
+  const columns = new Set(db.prepare('PRAGMA table_info(shipments)').all().map((c) => c.name));
+  if (!columns.has('exported_at')) db.exec('ALTER TABLE shipments ADD COLUMN exported_at TEXT');
 }
 
 function parseJson(value, fallback) {
@@ -152,27 +159,6 @@ function createStore(db) {
       ).run(shop, JSON.stringify(data));
     },
 
-    // ---- barcode series ----
-    /**
-     * Atomically reserves the next serial in [start, end] for the prefix.
-     * Returns null once the allotted series is exhausted.
-     */
-    reserveSerial(shop, prefix, start, end) {
-      return transaction(() => {
-        const row = db.prepare('SELECT next_serial FROM barcode_counters WHERE shop = ? AND prefix = ?').get(shop, prefix);
-        const serial = row ? Math.max(row.next_serial, start) : start;
-        if (serial > end) return null;
-        db.prepare(
-          `INSERT INTO barcode_counters (shop, prefix, next_serial) VALUES (?, ?, ?)
-           ON CONFLICT(shop, prefix) DO UPDATE SET next_serial = excluded.next_serial`,
-        ).run(shop, prefix, serial + 1);
-        return serial;
-      });
-    },
-    peekSerial(shop, prefix) {
-      return db.prepare('SELECT next_serial FROM barcode_counters WHERE shop = ? AND prefix = ?').get(shop, prefix)?.next_serial ?? null;
-    },
-
     // ---- shipments ----
     createShipment({ shop, orderId, orderName, customerId, barcode, articleType, status }) {
       const info = db
@@ -187,6 +173,7 @@ function createStore(db) {
       const allowed = [
         'order_name', 'customer_id', 'article_type', 'article', 'status', 'errors', 'tariff', 'booking_ref', 'booked_at',
         'label_path', 'fulfillment_ids', 'shopify_status', 'last_event', 'last_event_at', 'last_polled_at',
+        'barcode', 'exported_at',
       ];
       const keys = Object.keys(fields).filter((k) => allowed.includes(k));
       if (!keys.length) return;
@@ -264,6 +251,21 @@ function createStore(db) {
           event.source,
         );
       return info.changes > 0;
+    },
+    deleteEvents(shipmentId) {
+      db.prepare('DELETE FROM tracking_events WHERE shipment_id = ?').run(shipmentId);
+    },
+    /** Shipments with a tracking number, oldest first, for the Excel export. */
+    listShipmentsForExport(shop) {
+      return db
+        .prepare(`SELECT * FROM shipments WHERE shop = ? AND booked_at IS NOT NULL ORDER BY booked_at, id`)
+        .all(shop)
+        .map(hydrateShipment);
+    },
+    markExported(shop, ids, when) {
+      if (!ids.length) return;
+      const placeholders = ids.map(() => '?').join(',');
+      db.prepare(`UPDATE shipments SET exported_at = ? WHERE shop = ? AND id IN (${placeholders})`).run(when, shop, ...ids);
     },
     listEvents(shipmentId) {
       return db.prepare('SELECT * FROM tracking_events WHERE shipment_id = ? ORDER BY happened_at DESC, id DESC').all(shipmentId);

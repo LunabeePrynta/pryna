@@ -58,8 +58,17 @@ export function createContext({ db, config, fetchImpl = fetch, logger = console 
       return new ShopifyAdmin({ shop, accessToken: record.access_token, apiVersion: config.shopify.apiVersion, fetchImpl });
     },
 
-    /** Public tracking page on the storefront (served through the app proxy). */
+    /** True when India Post tracking API credentials are configured for the shop. */
+    hasTracking(shop, settings = ctx.getSettings(shop)) {
+      return Boolean(settings.indiaPost.username && settings.indiaPost.password);
+    },
+
+    /**
+     * Tracking link for the customer: the store's own tracking page (app proxy) when live tracking is
+     * configured, otherwise undefined so Shopify uses its built-in India Post tracking link.
+     */
     trackingUrl(shop, barcode) {
+      if (!ctx.hasTracking(shop)) return undefined;
       return `https://${shop}${config.shopify.proxyPath}?awb=${encodeURIComponent(barcode)}`;
     },
   };

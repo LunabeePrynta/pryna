@@ -1,8 +1,8 @@
-# Orders list → select orders → "More actions" → Book with India Post.
-# Opens the app with the selected order ids pre-selected for booking and label download.
+# Orders list → select orders → "More actions" → Add India Post tracking.
+# Opens the app with just the selected orders listed, ready for tracking numbers.
 [[extensions]]
-name = "Book with India Post"
-description = "Book the selected orders with India Post and download their labels"
+name = "Add India Post tracking"
+description = "Enter India Post tracking numbers for the selected orders"
 handle = "book-orders-indiapost"
 type = "admin_link"
 

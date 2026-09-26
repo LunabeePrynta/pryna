@@ -19,7 +19,7 @@ redirect_urls = ["https://ship.lunabee.in/auth/callback"]
 api_version = "2026-07"
 
   [[webhooks.subscriptions]]
-  topics = ["orders/create", "app/uninstalled"]
+  topics = ["app/uninstalled"]
   uri = "/webhooks/shopify"
 
   [[webhooks.subscriptions]]

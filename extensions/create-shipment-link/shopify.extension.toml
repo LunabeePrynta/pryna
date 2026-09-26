@@ -1,8 +1,8 @@
-# Order details page → "More actions" → Create India Post shipment.
-# Opens the app with ?id=<order id>, which shows the "Create shipment" form for that order.
+# Order details page → "More actions" → Add India Post tracking.
+# Opens the app with ?id=<order id>, which shows the "Create order" form for that order.
 [[extensions]]
-name = "Create India Post shipment"
-description = "Book this order with India Post and download its shipping label"
+name = "Add India Post tracking"
+description = "Enter the India Post tracking number for this order and mark it fulfilled"
 handle = "create-indiapost-shipment"
 type = "admin_link"
 

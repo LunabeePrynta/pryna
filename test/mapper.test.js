@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildArticle,
-  buildLabel,
   chooseArticleType,
   normalizeMobile,
   sanitizeOverrides,
@@ -86,19 +85,6 @@ test('pickup mode fills pickup fields with a schedule date', () => {
 test('pickup schedule skips Sunday', () => {
   // Saturday 2026-09-26 12:00 IST → next working day is Monday 09/28
   assert.equal(pickupScheduleDate('13:00-16:00', new Date('2026-09-26T06:30:00Z')), '09/28/2026 01:00:00 PM');
-});
-
-test('label payload carries booking data', () => {
-  const settings = sampleSettings();
-  const { article } = buildArticle(sampleOrder(), settings, 'ET214330015IN');
-  const label = buildLabel(article, settings, { tariff: 72, bookingRef: 3868, bookedAt: '2026-09-25T06:30:00Z' });
-  assert.equal(label.barcode_no, 'ET214330015IN');
-  assert.equal(label.service_type, 'SP');
-  assert.equal(label.customer_id, 3000064781);
-  assert.equal(label.booking_datetime, '25-09-2026 12:00:00');
-  assert.equal(label.booking_office_name, 'Chennai GPO');
-  assert.equal(label.size, 'A6');
-  assert.equal(label.total_amount, 72);
 });
 
 test('form edits override order data and defaults', () => {

@@ -20,32 +20,39 @@
   .card { background:var(--card); border-radius:12px; padding:16px; box-shadow:0 1px 0 rgba(0,0,0,.07); margin-bottom:12px; }
   .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
   .toolbar .spacer { flex:1; }
-  button.btn { border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:8px; padding:6px 12px; font-weight:600; cursor:pointer; }
+  .toolbar label { display:flex; gap:6px; align-items:center; font-weight:600; font-size:13px; }
+  button.btn { border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:8px; padding:6px 12px; font-weight:600; cursor:pointer; white-space:nowrap; }
   button.btn.primary { background:var(--primary); color:var(--primary-fg); border-color:var(--primary); }
   button.btn:disabled { opacity:.5; cursor:default; }
   input, select { font:inherit; padding:6px 10px; border:1px solid #8a8a8a; border-radius:8px; background:#fff; color:var(--fg); min-width:0; }
+  input.awb { width:160px; text-transform:uppercase; letter-spacing:.03em; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  input.invalid { border-color:#c70a24; background:var(--bad); }
+  input.valid { border-color:#29845a; }
   .table-wrap { overflow-x:auto; }
   table { width:100%; border-collapse:collapse; }
   th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; white-space:nowrap; }
   th { color:var(--muted); font-weight:600; font-size:12px; }
-  td.wrap { white-space:normal; min-width:180px; }
+  td.wrap { white-space:normal; min-width:160px; }
+  td.actions { text-align:right; }
   .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; background:#ebebeb; }
   .badge.DELIVERED { background:var(--ok); color:var(--ok-fg); }
   .badge.BOOKED, .badge.IN_TRANSIT, .badge.OUT_FOR_DELIVERY { background:var(--info); color:var(--info-fg); }
-  .badge.ON_HOLD, .badge.BOOKING, .badge.PENDING { background:var(--warn); color:var(--warn-fg); }
-  .badge.ERROR, .badge.RETURNED { background:var(--bad); color:var(--bad-fg); }
+  .badge.ON_HOLD { background:var(--warn); color:var(--warn-fg); }
+  .badge.RETURNED { background:var(--bad); color:var(--bad-fg); }
   .muted { color:var(--muted); }
+  .small { font-size:12px; }
   .err { color:var(--bad-fg); font-size:12px; }
+  .warn-text { color:var(--warn-fg); font-size:12px; }
   .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
   label.field { display:flex; flex-direction:column; gap:4px; font-weight:600; font-size:13px; }
   label.field small { font-weight:400; color:var(--muted); }
   label.field input, label.field select { font-weight:400; }
-  label.check { display:flex; gap:8px; align-items:center; }
+  label.check { display:flex; gap:8px; align-items:center; margin:4px 0; }
   .banner { padding:12px 14px; border-radius:10px; background:var(--warn); color:var(--warn-fg); margin-bottom:12px; }
   .banner.info { background:var(--info); color:var(--info-fg); }
   code { background:#f3f3f3; padding:1px 5px; border-radius:4px; word-break:break-all; }
   a { color:#005bd3; }
-  .events li { margin-bottom:6px; }
+  a.linklike { cursor:pointer; font-weight:600; }
   [hidden] { display:none !important; }
   dialog.sheet { border:0; padding:0; border-radius:14px; width:min(760px, calc(100vw - 24px)); max-height:calc(100vh - 32px);
     box-shadow:0 20px 60px rgba(0,0,0,.25); color:var(--fg); background:var(--card); }
@@ -55,7 +62,6 @@
   .dlg-head h2 { margin:0; font-size:17px; }
   .dlg-body { padding:16px 20px; overflow-y:auto; }
   .dlg-foot { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; padding:12px 20px; border-top:1px solid var(--line); }
-  .dlg-foot .spacer { flex:1; }
   .icon-btn { border:0; background:transparent; font-size:22px; line-height:1; cursor:pointer; color:var(--muted); padding:2px 6px; }
   .section { margin-bottom:18px; }
   .section h3 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 8px; }
@@ -65,120 +71,93 @@
   .notice { padding:10px 12px; border-radius:8px; margin-bottom:12px; font-size:13px; }
   .notice.bad { background:var(--bad); color:var(--bad-fg); }
   .notice.ok { background:var(--ok); color:var(--ok-fg); }
+  .notice.warn { background:var(--warn); color:var(--warn-fg); }
   .notice.info { background:var(--info); color:var(--info-fg); }
   .notice ul { margin:4px 0 0; padding-left:18px; }
-  .rate { display:flex; gap:16px; flex-wrap:wrap; align-items:baseline; }
-  .rate strong { font-size:18px; }
-  .awb-big { font-size:22px; font-weight:700; letter-spacing:.05em; }
+  .tracking-row { display:grid; grid-template-columns:2fr 1fr; gap:12px; margin-bottom:16px; }
+  @media (max-width:520px) { .tracking-row { grid-template-columns:1fr; } }
+  .tracking-row input[name=trackingNumber] { font-size:18px; padding:10px 12px; text-transform:uppercase; letter-spacing:.05em; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .awb-big { font-size:22px; font-weight:700; letter-spacing:.05em; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
   .kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:12px 0; }
   .kv > div > span:first-child { display:block; color:var(--muted); font-size:12px; }
   .dims { display:flex; gap:6px; align-items:center; }
   .dims input { width:100%; }
-  td.actions { text-align:right; }
-  td.actions .btn + .btn { margin-left:4px; }
-  a.linklike { cursor:pointer; font-weight:600; }
 </style>
 </head>
 <body>
 <main>
   <h1>India Post Shipping</h1>
-  <div id="setup-banner" class="banner" hidden>Finish <a href="#" data-tab-link="settings">Settings</a> (India Post login, customer &amp; contract ids, AWB series, sender address) before pushing orders.</div>
 
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="orders" aria-selected="true">Orders</button>
-    <button role="tab" data-tab="shipments" aria-selected="false">Shipments</button>
+    <button role="tab" data-tab="created" aria-selected="false">Created orders &amp; Excel</button>
     <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
   </nav>
 
-  <!-- Orders -->
+  <!-- Orders: enter tracking numbers -->
   <section id="tab-orders">
     <div id="focus-banner" class="banner info" hidden></div>
     <div class="card">
       <div class="toolbar">
         <select id="order-filter" aria-label="Filter">
-          <option value="unfulfilled">Unfulfilled orders</option>
+          <option value="unfulfilled">Waiting for tracking (unfulfilled)</option>
           <option value="all">All recent orders</option>
         </select>
         <input id="order-search" type="search" placeholder="Search orders" aria-label="Search orders">
         <button class="btn" id="reload-orders">Refresh</button>
         <span class="spacer"></span>
-        <span id="selected-count" class="muted"></span>
-        <button class="btn primary" id="push-selected" disabled>Book selected</button>
-        <button class="btn" id="labels-selected" disabled>Download labels</button>
+        <label>Booking date <input type="date" id="quick-date"></label>
+        <button class="btn primary" id="save-all" disabled>Save entered tracking numbers</button>
       </div>
+      <p class="muted small" style="margin:-4px 0 10px">Type the India Post tracking number next to each order and press <strong>Enter</strong> (or <strong>Save entered tracking numbers</strong> for many at once). Use <strong>Create order</strong> to also check the address, weight and COD.</p>
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th><input type="checkbox" id="select-all" aria-label="Select all"></th>
-            <th>Order</th><th>Date</th><th>Deliver to</th><th>Total</th><th>Weight</th>
-            <th>India Post</th><th>Article no.</th><th></th>
+            <th>Order</th><th>Date</th><th>Deliver to</th><th>Total</th><th>Weight</th><th>India Post tracking number</th><th></th>
           </tr></thead>
-          <tbody id="orders-body"><tr><td colspan="9" class="muted">Loading…</td></tr></tbody>
+          <tbody id="orders-body"><tr><td colspan="7" class="muted">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
   </section>
 
-  <!-- Shipments -->
-  <section id="tab-shipments" hidden>
+  <!-- Created orders + Excel -->
+  <section id="tab-created" hidden>
     <div class="card">
       <div class="toolbar">
-        <button class="btn" id="reload-shipments">Reload</button>
-        <button class="btn" id="refresh-tracking">Refresh tracking from India Post</button>
+        <label>From <input type="date" id="exp-from"></label>
+        <label>To <input type="date" id="exp-to"></label>
+        <label class="check"><input type="checkbox" id="exp-new"> Only not downloaded yet</label>
+        <span class="spacer"></span>
+        <span id="exp-count" class="muted"></span>
+        <button class="btn primary" id="download-excel">Download Excel</button>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Order</th><th>Article no.</th><th>Type</th><th>Status</th><th>Latest event</th><th>Tariff</th><th></th></tr></thead>
-          <tbody id="shipments-body"></tbody>
+          <thead><tr><th>Booking date</th><th>Order</th><th>Tracking number</th><th>Deliver to</th><th>Status</th><th>Downloaded</th><th></th></tr></thead>
+          <tbody id="created-body"></tbody>
         </table>
       </div>
     </div>
-    <div class="card" id="shipment-detail" hidden></div>
   </section>
 
   <!-- Settings -->
   <section id="tab-settings" hidden>
     <form id="settings-form">
       <div class="card">
-        <h2>India Post account</h2>
-        <div class="grid">
-          <label class="field">Username<input name="indiaPost.username" autocomplete="off"></label>
-          <label class="field">Password<input name="indiaPost.password" type="password" autocomplete="new-password"></label>
-          <label class="field">Bulk customer id<small>10 digits</small><input name="indiaPost.bulkCustomerId" inputmode="numeric"></label>
-        </div>
-        <h2 style="margin-top:16px">Contract ids</h2>
-        <div class="grid">
-          <label class="field">Speed Post (doc / parcel)<input name="indiaPost.contracts.SPEED_POST" inputmode="numeric"></label>
-          <label class="field">Business Parcel<input name="indiaPost.contracts.BUSINESS_PARCEL" inputmode="numeric"></label>
-          <label class="field">24 hr Speed Post Doc<input name="indiaPost.contracts.24_SPEEDPOST_DOC" inputmode="numeric"></label>
-          <label class="field">24 hr Parcel Special<input name="indiaPost.contracts.24_SPP_PARSPL" inputmode="numeric"></label>
-          <label class="field">48 hr Speed Post Doc<input name="indiaPost.contracts.48_SPEEDPOST_DOC" inputmode="numeric"></label>
-        </div>
-        <div class="toolbar" style="margin-top:12px"><button type="button" class="btn" id="test-connection">Test connection</button><span id="test-result" class="muted"></span></div>
-      </div>
-
-      <div class="card">
-        <h2>Article numbers (AWB series)</h2>
-        <div class="grid">
-          <label class="field">Series start<small>e.g. ET21433001XIN</small><input name="barcode.seriesStart"></label>
-          <label class="field">Series end<small>e.g. ET21434000XIN</small><input name="barcode.seriesEnd"></label>
-        </div>
-        <p id="series-usage" class="muted"></p>
-      </div>
-
-      <div class="card">
-        <h2>Service</h2>
+        <h2>Shipping defaults</h2>
+        <p class="muted small">Used to pre-fill each order and for the Excel sheet. You can change them per order.</p>
         <div class="grid">
           <label class="field">Product<select name="product" id="product-select"></select></label>
-          <label class="field">Handover<select name="mode"><option value="DROPOFF">Drop-off at post office</option><option value="PICKUP">Pickup from my address</option></select></label>
-          <label class="field">Pickup / drop-off office id<small>8 digits — use the finder below</small><input name="officeId" inputmode="numeric"></label>
-          <label class="field">Pickup slot<select name="pickupSlot"><option>10:00-13:00</option><option>13:00-16:00</option></select></label>
+          <label class="field">Default weight (g)<small>Used when products have no weight</small><input name="package.defaultWeightGrams" type="number" min="1"></label>
+          <label class="field">Packaging weight (g)<small>Added to every order</small><input name="package.packagingWeightGrams" type="number" min="0"></label>
+          <label class="field">Parcel shape<select name="package.parcelShape"><option value="NROL">Box / rectangle</option><option value="ROLL">Roll / cylinder</option></select></label>
+          <label class="field">Document L × B × H (cm)<span class="dims"><input name="package.doc.length" type="number" step="0.1"><input name="package.doc.breadth" type="number" step="0.1"><input name="package.doc.height" type="number" step="0.1"></span></label>
+          <label class="field">Parcel L × B × H (cm)<span class="dims"><input name="package.parcel.length" type="number" step="0.1"><input name="package.parcel.breadth" type="number" step="0.1"><input name="package.parcel.height" type="number" step="0.1"></span></label>
         </div>
-        <div class="toolbar" style="margin-top:12px">
-          <input id="office-pin" placeholder="Pincode" inputmode="numeric" maxlength="6" style="width:120px">
-          <button type="button" class="btn" id="find-office">Find offices</button>
-          <select id="office-results" hidden></select>
-        </div>
+        <label class="check" style="margin-top:12px"><input type="checkbox" name="cod.enabled"> Unpaid Cash-on-Delivery orders are COD (amount filled in automatically)</label>
+        <label class="check"><input type="checkbox" name="insurance.enabled"> Insure orders worth at least ₹ <input name="insurance.minOrderValue" type="number" min="0" style="width:110px"></label>
+        <label class="check"><input type="checkbox" name="automation.notifyCustomer"> Email the customer the shipping confirmation with the tracking number</label>
       </div>
 
       <div class="card">
@@ -198,39 +177,21 @@
       </div>
 
       <div class="card">
-        <h2>Package defaults</h2>
+        <h2>India Post account <span class="muted small">(optional)</span></h2>
+        <p class="muted small">Customer and contract ids fill the “India Post upload” sheet in the Excel file. Username and password are only needed for live tracking updates.</p>
         <div class="grid">
-          <label class="field">Default weight (g)<small>Used when products have no weight</small><input name="package.defaultWeightGrams" type="number" min="1"></label>
-          <label class="field">Packaging weight (g)<small>Added to every order</small><input name="package.packagingWeightGrams" type="number" min="0"></label>
-          <label class="field">Parcel shape<select name="package.parcelShape"><option value="NROL">Box / rectangle</option><option value="ROLL">Roll / cylinder</option></select></label>
-          <label class="field">Document L × B × H (cm)<span style="display:flex;gap:4px"><input name="package.doc.length" type="number" step="0.1"><input name="package.doc.breadth" type="number" step="0.1"><input name="package.doc.height" type="number" step="0.1"></span></label>
-          <label class="field">Parcel L × B × H (cm)<span style="display:flex;gap:4px"><input name="package.parcel.length" type="number" step="0.1"><input name="package.parcel.breadth" type="number" step="0.1"><input name="package.parcel.height" type="number" step="0.1"></span></label>
+          <label class="field">Bulk customer id<input name="indiaPost.bulkCustomerId" inputmode="numeric"></label>
+          <label class="field">Speed Post contract id<input name="indiaPost.contracts.SPEED_POST" inputmode="numeric"></label>
+          <label class="field">Business Parcel contract id<input name="indiaPost.contracts.BUSINESS_PARCEL" inputmode="numeric"></label>
+          <label class="field">Handover<select name="mode"><option value="DROPOFF">Drop-off at post office</option><option value="PICKUP">Pickup from my address</option></select></label>
+          <label class="field">Post office id<small>8 digits</small><input name="officeId" inputmode="numeric"></label>
+          <label class="field">API username<small>For live tracking</small><input name="indiaPost.username" autocomplete="off"></label>
+          <label class="field">API password<input name="indiaPost.password" type="password" autocomplete="new-password"></label>
         </div>
-      </div>
-
-      <div class="card">
-        <h2>Label</h2>
-        <div class="grid">
-          <label class="field">Size<select name="label.size"><option>A6</option><option>A7</option></select></label>
-          <label class="field">Transmission<select name="label.transmissionMode"><option value="S">Surface</option><option value="A">Air</option></select></label>
-          <label class="field">Booking office name<input name="label.bookingOfficeName"></label>
-          <label class="field">Booking office pincode<input name="label.bookingOfficePin" inputmode="numeric" maxlength="6"></label>
+        <div class="toolbar" style="margin-top:12px">
+          <button type="button" class="btn" id="test-connection">Test tracking connection</button><span id="test-result" class="muted"></span>
         </div>
-      </div>
-
-      <div class="card">
-        <h2>Automation &amp; extras</h2>
-        <label class="check"><input type="checkbox" name="automation.autoPush"> Automatically push new paid / COD orders to India Post</label>
-        <label class="check"><input type="checkbox" name="automation.autoFulfill"> Mark orders fulfilled in Shopify with the India Post tracking number</label>
-        <label class="check"><input type="checkbox" name="automation.notifyCustomer"> Email the customer the shipping confirmation</label>
-        <label class="check"><input type="checkbox" name="cod.enabled"> Book unpaid Cash-on-Delivery orders as COD</label>
-        <label class="check"><input type="checkbox" name="insurance.enabled"> Insure orders worth at least ₹ <input name="insurance.minOrderValue" type="number" min="0" style="width:110px"></label>
-      </div>
-
-      <div class="card">
-        <h2>Tracking</h2>
-        <p>Storefront tracking page: <a id="tracking-page" target="_blank" rel="noopener"></a> — add it to your store menu.</p>
-        <p>Give India Post this webhook URL for real-time events (with your secret): <code id="webhook-url"></code></p>
+        <p id="tracking-info" class="muted small" hidden>Customer tracking page: <a id="tracking-page" target="_blank" rel="noopener"></a><br>India Post webhook: <code id="webhook-url"></code></p>
       </div>
 
       <div class="toolbar"><span class="spacer"></span><button class="btn primary" type="submit">Save settings</button></div>
@@ -241,7 +202,7 @@
 <dialog id="ship-dialog" class="sheet" aria-labelledby="ship-title">
   <form id="ship-form" novalidate>
     <header class="dlg-head">
-      <div><h2 id="ship-title">Create India Post shipment</h2><div id="ship-sub" class="muted"></div></div>
+      <div><h2 id="ship-title">Create order</h2><div id="ship-sub" class="muted"></div></div>
       <button type="button" class="icon-btn" data-close aria-label="Close">×</button>
     </header>
     <div class="dlg-body" id="ship-body"></div>
@@ -255,7 +216,7 @@
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const toast = (msg, isError = false) => (window.shopify?.toast ? shopify.toast.show(msg, { isError }) : alert(msg));
-  const state = { statusLabels: {}, products: {}, settings: null, trackingPageUrl: '', orders: [], selected: new Set(), shipments: [], focusIds: [] };
+  const state = { statusLabels: {}, products: {}, settings: null, orders: [], shipments: [], focusIds: [] };
 
   async function api(path, { method = 'GET', body, raw = false } = {}) {
     const res = await fetch(`/api${path}`, {
@@ -269,198 +230,191 @@
     return data;
   }
 
+  const todayIst = () => new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
+  const istDay = (iso) => new Date(new Date(iso).getTime() + 330 * 60000).toISOString().slice(0, 10);
   const fmtDate = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+  const fmtDay = (iso) => (iso ? new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : '');
   const badge = (status) => `<span class="badge ${esc(status)}">${esc(state.statusLabels[status] || status)}</span>`;
+
+  // India Post article number: 2 letters + 8 digit serial + check digit + 2 letters (weighted modulus 11).
+  function awbProblem(value) {
+    const v = value.trim().toUpperCase().replace(/\s+/g, '');
+    if (!v) return null;
+    if (!/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(v)) return 'Format: 2 letters, 9 digits, 2 letters (e.g. EB123456785IN)';
+    const weights = [8, 6, 4, 2, 3, 5, 9, 7];
+    const sum = [...v.slice(2, 10)].reduce((a, d, i) => a + Number(d) * weights[i], 0);
+    const r = sum % 11;
+    const check = r === 0 ? 5 : r === 1 ? 0 : 11 - r;
+    return check === Number(v[10]) ? null : 'Check digit does not match — probably a typo';
+  }
+  function markAwbInput(input) {
+    const problem = awbProblem(input.value);
+    input.classList.toggle('invalid', Boolean(problem));
+    input.classList.toggle('valid', !problem && input.value.trim().length > 0);
+    input.title = problem || '';
+    return problem;
+  }
 
   // ---- tabs ----
   function showTab(name) {
     $$('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
-    ['orders', 'shipments', 'settings'].forEach((t) => ($(`#tab-${t}`).hidden = t !== name));
-    if (name === 'shipments') loadShipments();
+    ['orders', 'created', 'settings'].forEach((t) => ($(`#tab-${t}`).hidden = t !== name));
+    if (name === 'created') loadCreated();
   }
   $$('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
-  $$('[data-tab-link]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); showTab(a.dataset.tabLink); }));
 
   // ---- orders ----
-  async function loadOrders({ keepSelection = false } = {}) {
+  async function loadOrders() {
     const body = $('#orders-body');
-    body.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
+    body.innerHTML = '<tr><td colspan="7" class="muted">Loading…</td></tr>';
     try {
       const params = state.focusIds.length
         ? new URLSearchParams({ ids: state.focusIds.join(',') })
         : new URLSearchParams({ filter: $('#order-filter').value, q: $('#order-search').value });
       const { orders } = await api(`/orders?${params}`);
       state.orders = orders;
-      if (!keepSelection) state.selected.clear();
       renderOrders();
     } catch (err) {
-      body.innerHTML = `<tr><td colspan="9" class="err">${esc(err.message)}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="7" class="err">${esc(err.message)}</td></tr>`;
     }
   }
-
-  const canBook = (s) => !s || ['PENDING', 'ERROR'].includes(s.status);
 
   function renderOrders() {
     const body = $('#orders-body');
     if (!state.orders.length) {
-      body.innerHTML = '<tr><td colspan="9" class="muted">No orders found.</td></tr>';
-    } else {
-      body.innerHTML = state.orders.map((o) => {
-        const s = o.shipment;
-        const errors = s?.errors?.length ? `<div class="err">${s.errors.map(esc).join('<br>')}</div>` : '';
-        const actions = canBook(s)
-          ? `<button class="btn primary" data-ship="${esc(o.id)}">${s ? 'Fix &amp; retry' : 'Create shipment'}</button>`
-          : `<button class="btn" data-download="${s.id}" data-awb="${esc(s.barcode)}">Download label</button>
-             <button class="btn" data-ship="${esc(o.id)}">View</button>`;
-        return `<tr>
-          <td><input type="checkbox" data-select="${esc(o.id)}" ${state.selected.has(o.id) ? 'checked' : ''} aria-label="Select ${esc(o.name)}"></td>
-          <td><a class="linklike" data-ship="${esc(o.id)}">${esc(o.name)}</a></td>
-          <td>${esc(fmtDate(o.createdAt))}</td>
-          <td class="wrap">${esc(o.customer)}<div class="muted">${esc(o.city)}${o.pincode ? ` · ${esc(o.pincode)}` : ''}</div></td>
-          <td>${esc(o.currency)} ${Number(o.total).toFixed(2)}<div class="muted">${esc(String(o.financialStatus || '').replace(/_/g, ' ').toLowerCase())}</div></td>
-          <td>${o.weight ? `${o.weight} g` : '<span class="muted">—</span>'}</td>
-          <td class="wrap">${s ? badge(s.status) : '<span class="muted">Not booked</span>'}${errors}${s?.lastEvent ? `<div class="muted">${esc(s.lastEvent)}</div>` : ''}</td>
-          <td>${s ? `<code>${esc(s.barcode)}</code>` : ''}</td>
-          <td class="actions">${actions}</td>
-        </tr>`;
-      }).join('');
+      body.innerHTML = '<tr><td colspan="7" class="muted">No orders waiting for tracking.</td></tr>';
+      updateSaveAll();
+      return;
     }
-    updateSelection();
+    body.innerHTML = state.orders.map((o) => {
+      const s = o.shipment;
+      const tracking = s
+        ? `<code>${esc(s.barcode)}</code> ${badge(s.status)}<div class="muted small">${esc(fmtDay(s.bookedAt))}${s.fulfilled ? ' · fulfilled' : ''}</div>
+           ${s.warnings?.length ? `<div class="warn-text">${s.warnings.map(esc).join('<br>')}</div>` : ''}`
+        : `<input class="awb" data-awb="${esc(o.id)}" placeholder="EB123456785IN" maxlength="15" autocomplete="off" aria-label="Tracking number for ${esc(o.name)}">
+           <div class="err small" data-awb-msg="${esc(o.id)}"></div>`;
+      return `<tr>
+        <td><a class="linklike" data-open="${esc(o.id)}">${esc(o.name)}</a></td>
+        <td>${esc(fmtDate(o.createdAt))}</td>
+        <td class="wrap">${esc(o.customer)}<div class="muted">${esc(o.city)}${o.pincode ? ` · ${esc(o.pincode)}` : ''}</div></td>
+        <td>${esc(o.currency)} ${Number(o.total).toFixed(2)}<div class="muted">${esc(String(o.financialStatus || '').replace(/_/g, ' ').toLowerCase())}</div></td>
+        <td>${o.weight ? `${o.weight} g` : '<span class="muted">—</span>'}</td>
+        <td class="wrap">${tracking}</td>
+        <td class="actions">${s
+          ? `<button class="btn" data-open="${esc(o.id)}">Edit</button>`
+          : `<button class="btn" data-save-one="${esc(o.id)}">Save</button> <button class="btn primary" data-open="${esc(o.id)}">Create order</button>`}</td>
+      </tr>`;
+    }).join('');
+    updateSaveAll();
   }
 
-  function updateSelection() {
-    const n = state.selected.size;
-    $('#selected-count').textContent = n ? `${n} selected` : '';
-    $('#push-selected').disabled = !state.orders.some((o) => state.selected.has(o.id) && canBook(o.shipment));
-    $('#labels-selected').disabled = !state.orders.some((o) => state.selected.has(o.id) && o.shipment?.bookedAt);
-    $('#select-all').checked = n > 0 && n === state.orders.length;
+  function enteredRows() {
+    return $$('#orders-body input[data-awb]').filter((i) => i.value.trim());
+  }
+  function updateSaveAll() {
+    const n = enteredRows().length;
+    const btn = $('#save-all');
+    btn.disabled = n === 0;
+    btn.textContent = n > 1 ? `Save ${n} tracking numbers` : 'Save entered tracking numbers';
   }
 
-  async function push(orderIds, button) {
-    if (button) button.disabled = true;
-    try {
-      const { results } = await api('/orders/push', { method: 'POST', body: { orderIds } });
-      const ok = results.filter((r) => !['ERROR', 'BOOKING'].includes(r.status)).length;
-      const failed = results.length - ok;
-      toast(failed ? `${ok} booked, ${failed} need attention — open them to fix` : `${ok} order(s) booked with India Post`, failed > 0);
-      await loadOrders({ keepSelection: true });
-    } catch (err) {
-      toast(err.message, true);
-    } finally {
-      if (button) button.disabled = false;
+  async function saveQuick(inputs, button) {
+    const bad = inputs.filter((i) => markAwbInput(i));
+    if (bad.length) {
+      bad[0].focus();
+      toast('Fix the highlighted tracking numbers first', true);
+      return;
     }
-  }
-
-  function saveBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = Object.assign(document.createElement('a'), { href: url, download: filename });
-    document.body.append(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  }
-
-  async function withBusy(button, fn) {
+    const entries = inputs.map((i) => ({ orderId: i.dataset.awb, trackingNumber: i.value.trim().toUpperCase() }));
     const label = button?.textContent;
-    if (button) { button.disabled = true; button.textContent = 'Working…'; }
+    if (button) { button.disabled = true; button.textContent = 'Saving…'; }
     try {
-      return await fn();
+      const { results } = await api('/orders/save', { method: 'POST', body: { entries, bookingDate: $('#quick-date').value } });
+      const failed = results.filter((r) => !r.ok);
+      const saved = results.length - failed.length;
+      await loadOrders();
+      // Keep failed entries in their boxes with the reason.
+      for (const r of failed) {
+        const entry = entries.find((e) => e.orderId === r.orderId);
+        const input = $(`#orders-body input[data-awb="${CSS.escape(r.orderId)}"]`);
+        if (input && entry) { input.value = entry.trackingNumber; input.classList.add('invalid'); }
+        const msg = $(`#orders-body [data-awb-msg="${CSS.escape(r.orderId)}"]`);
+        if (msg) msg.textContent = r.error;
+      }
+      updateSaveAll();
+      toast(failed.length ? `${saved} saved, ${failed.length} need attention` : `${saved} order(s) fulfilled with tracking`, failed.length > 0);
     } catch (err) {
       toast(err.message, true);
     } finally {
-      if (button) { button.disabled = false; button.textContent = label; }
+      if (button) { button.disabled = false; button.textContent = label; updateSaveAll(); }
     }
   }
 
-  /** Downloads one shipment's label as <AWB>.pdf. */
-  const downloadLabel = (shipmentId, awb, button) => withBusy(button, async () => {
-    const res = await api(`/shipments/${shipmentId}/label?download=1`, { raw: true });
-    saveBlob(await res.blob(), `${awb || 'india-post-label'}.pdf`);
+  $('#orders-body').addEventListener('input', (e) => {
+    const input = e.target.closest('input[data-awb]');
+    if (!input) return;
+    const msg = $(`[data-awb-msg="${CSS.escape(input.dataset.awb)}"]`);
+    if (msg) msg.textContent = '';
+    const problem = markAwbInput(input);
+    if (problem && input.value.trim().length >= 13 && msg) msg.textContent = problem;
+    updateSaveAll();
   });
-
-  /** Opens the label PDF in a new tab for printing (falls back to download if pop-ups are blocked). */
-  const printLabel = (shipmentId, awb, button) => withBusy(button, async () => {
-    const res = await api(`/shipments/${shipmentId}/label`, { raw: true });
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    if (!window.open(url, '_blank')) saveBlob(blob, `${awb || 'india-post-label'}.pdf`);
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  $('#orders-body').addEventListener('keydown', (e) => {
+    const input = e.target.closest('input[data-awb]');
+    if (input && e.key === 'Enter' && input.value.trim()) { e.preventDefault(); saveQuick([input]); }
   });
-
-  /** One PDF with the labels of several shipments. */
-  const downloadLabels = (shipmentIds, button) => withBusy(button, async () => {
-    const res = await api('/labels?download=1', { method: 'POST', body: { shipmentIds }, raw: true });
-    saveBlob(await res.blob(), 'india-post-labels.pdf');
-  });
-
   $('#orders-body').addEventListener('click', (e) => {
-    const shipBtn = e.target.closest('[data-ship]');
-    if (shipBtn) return openShipment(shipBtn.dataset.ship);
-    const dl = e.target.closest('[data-download]');
-    if (dl) return downloadLabel(Number(dl.dataset.download), dl.dataset.awb, dl);
+    const open = e.target.closest('[data-open]');
+    if (open) return openOrder(open.dataset.open);
+    const one = e.target.closest('[data-save-one]');
+    if (one) {
+      const input = $(`#orders-body input[data-awb="${CSS.escape(one.dataset.saveOne)}"]`);
+      if (!input?.value.trim()) { input?.focus(); return toast('Type the tracking number first', true); }
+      saveQuick([input], one);
+    }
   });
-  $('#orders-body').addEventListener('change', (e) => {
-    const box = e.target.closest('[data-select]');
-    if (!box) return;
-    box.checked ? state.selected.add(box.dataset.select) : state.selected.delete(box.dataset.select);
-    updateSelection();
-  });
-  $('#select-all').addEventListener('change', (e) => {
-    state.selected = new Set(e.target.checked ? state.orders.map((o) => o.id) : []);
-    renderOrders();
-  });
-  $('#push-selected').addEventListener('click', (e) => {
-    const ids = state.orders.filter((o) => state.selected.has(o.id) && canBook(o.shipment)).map((o) => o.id);
-    push(ids, e.currentTarget);
-  });
-  $('#labels-selected').addEventListener('click', (e) => {
-    const ids = state.orders.filter((o) => state.selected.has(o.id) && o.shipment?.bookedAt).map((o) => o.shipment.id);
-    downloadLabels(ids, e.currentTarget);
-  });
-  $('#reload-orders').addEventListener('click', () => loadOrders());
-  $('#order-filter').addEventListener('change', () => loadOrders());
+  $('#save-all').addEventListener('click', (e) => saveQuick(enteredRows(), e.currentTarget));
+  $('#reload-orders').addEventListener('click', loadOrders);
+  $('#order-filter').addEventListener('change', loadOrders);
   let searchTimer;
   $('#order-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(loadOrders, 400); });
 
-  // ---- "Create shipment" dialog ----
+  // ---- "Create order" dialog ----
   const dialog = $('#ship-dialog');
-  const ship = { orderId: null, draft: null, validateTimer: null };
-
+  const ship = { orderId: null, draft: null, timer: null };
   const field = (name, label, value, attrs = '') =>
     `<label class="field">${label}<input name="${name}" value="${esc(value ?? '')}" ${attrs}></label>`;
 
-  async function openShipment(orderId) {
+  async function openOrder(orderId) {
     ship.orderId = orderId;
-    $('#ship-title').textContent = 'India Post shipment';
+    $('#ship-title').textContent = 'Create order';
     $('#ship-sub').textContent = '';
     $('#ship-body').innerHTML = '<p class="muted">Loading order…</p>';
     $('#ship-foot').innerHTML = '<button type="button" class="btn" data-close>Close</button>';
     if (!dialog.open) dialog.showModal();
     try {
       ship.draft = await api(`/order?id=${encodeURIComponent(orderId)}`);
-      renderShipment();
+      const { order, shipment } = ship.draft;
+      $('#ship-sub').textContent = `${order.name} · ${fmtDate(order.createdAt)} · ${order.currency} ${Number(order.total).toFixed(2)} · ${String(order.financialStatus || '').replace(/_/g, ' ').toLowerCase()}`;
+      shipment ? renderSaved(shipment) : renderForm();
     } catch (err) {
       $('#ship-body').innerHTML = `<div class="notice bad">${esc(err.message)}</div>`;
     }
   }
 
-  function renderShipment() {
-    const { order, shipment } = ship.draft;
-    $('#ship-sub').textContent = `${order.name} · ${fmtDate(order.createdAt)} · ${order.currency} ${Number(order.total).toFixed(2)} · ${String(order.financialStatus || '').replace(/_/g, ' ').toLowerCase()}`;
-    if (shipment && !canBook(shipment)) return renderBooked(shipment);
-    renderForm();
-  }
-
   function renderForm() {
-    const { form, handover, errors, articleType, shipment } = ship.draft;
+    const { form, warnings, articleType, shipment, order } = ship.draft;
     const r = form.receiver;
-    $('#ship-title').textContent = shipment ? 'Fix and retry India Post shipment' : 'Create India Post shipment';
-    const handoverText = handover.mode === 'PICKUP'
-      ? `India Post will pick up from ${esc(handover.sender.address1 || '')}, ${esc(handover.sender.city || '')} (next working day, ${esc(state.settings?.pickupSlot || '')}).`
-      : `Drop off at post office <code>${esc(handover.officeId || 'not set')}</code>.`;
+    $('#ship-title').textContent = shipment ? `Edit ${order.name}` : `Create order ${order.name}`;
     $('#ship-body').innerHTML = `
-      <div id="ship-errors"></div>
-      ${shipment?.errors?.length ? `<div class="notice bad"><strong>India Post rejected the last attempt:</strong><ul>${shipment.errors.map((e) => `<li>${esc(e)}</li>`).join('')}</ul></div>` : ''}
+      ${!order.canFulfill && !shipment?.fulfilled ? '<div class="notice warn">This order has nothing left to fulfil in Shopify. The tracking number will be saved in the app and the Excel sheet only.</div>' : ''}
+      <div class="tracking-row">
+        <label class="field">India Post tracking number
+          <input name="trackingNumber" value="${esc(shipment?.barcode ?? '')}" placeholder="EB123456785IN" maxlength="15" autocomplete="off" required>
+          <span class="err small" id="awb-msg"></span></label>
+        <label class="field">Booking date<input name="bookingDate" type="date" value="${esc(shipment?.bookedAt ? istDay(shipment.bookedAt) : todayIst())}"></label>
+      </div>
+      <div id="ship-warnings"></div>
       <div class="section"><h3>Deliver to</h3>
         <div class="grid tight">
           ${field('receiver.name', 'Name', r.name, 'maxlength="80" autocomplete="off"')}
@@ -482,189 +436,179 @@
             <input name="dimensions.breadth" value="${esc(form.dimensions.breadth)}" type="number" min="1" step="0.1" aria-label="Breadth (cm)">
             <input name="dimensions.height" value="${esc(form.dimensions.height)}" type="number" min="1" step="0.1" aria-label="Height (cm)"></span></label>
         </div>
-        <p class="muted" id="ship-type">Books as <strong>${esc(articleType)}</strong>. Shopify weight: ${ship.draft.order.weightGrams || 0} g.</p>
+        <p class="muted small" id="ship-type">Product code: <strong>${esc(articleType)}</strong> · Shopify weight: ${order.weightGrams || 0} g</p>
       </div>
       <div class="section"><h3>Payment &amp; cover</h3>
         <div class="grid tight">
           ${field('codAmount', 'Cash on delivery amount (₹)', form.codAmount, 'type="number" min="0" step="0.01"')}
           ${field('insuranceValue', 'Insured value (₹)', form.insuranceValue, 'type="number" min="0" step="0.01"')}
         </div>
-        <p class="muted">Use 0 for prepaid orders / no insurance.</p>
-      </div>
-      <div class="section"><h3>Handover</h3><p>${handoverText} <a href="#" class="linklike" data-goto-settings>Change in settings</a></p></div>
-      <div id="ship-rate"></div>`;
+        <p class="muted small">Use 0 for prepaid orders / no insurance.</p>
+      </div>`;
     $('#ship-foot').innerHTML = `
-      <button type="button" class="btn" id="ship-quote">Get rate</button>
-      <span class="spacer"></span>
       <button type="button" class="btn" data-close>Cancel</button>
-      <button type="submit" class="btn primary" id="ship-submit">Create shipment</button>`;
-    showErrors(errors);
+      <button type="submit" class="btn primary" id="ship-submit">${shipment ? 'Save changes' : 'Create order &amp; fulfil'}</button>`;
+    showWarnings(warnings);
+    $('#ship-body [name=trackingNumber]').focus();
   }
 
-  function readShipForm() {
+  function readForm() {
     const out = {};
     $$('#ship-body [name]').forEach((el) => setPath(out, el.name, el.value.trim()));
-    return out;
+    const { trackingNumber, bookingDate, ...overrides } = out;
+    return { trackingNumber: (trackingNumber || '').toUpperCase(), bookingDate, overrides };
   }
 
-  function showErrors(errors) {
-    const box = $('#ship-errors');
+  function showWarnings(list) {
+    const box = $('#ship-warnings');
     if (!box) return;
-    box.innerHTML = errors.length
-      ? `<div class="notice bad"><strong>Fix before booking:</strong><ul>${errors.map((e) => `<li>${esc(e)}</li>`).join('')}</ul></div>`
+    box.innerHTML = list?.length
+      ? `<div class="notice warn"><strong>Please check</strong> (you can still save):<ul>${list.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>`
       : '';
-    const submit = $('#ship-submit');
-    if (submit) submit.disabled = errors.length > 0;
   }
 
-  async function validateShipForm() {
+  async function revalidate() {
     try {
-      const { errors, articleType } = await api('/order/validate', { method: 'POST', body: { orderId: ship.orderId, overrides: readShipForm() } });
-      showErrors(errors);
+      const { warnings, articleType } = await api('/order/validate', { method: 'POST', body: { orderId: ship.orderId, overrides: readForm().overrides } });
+      showWarnings(warnings);
       const type = $('#ship-type strong');
       if (type) type.textContent = articleType;
     } catch (err) {
-      showErrors([err.message]);
+      showWarnings([err.message]);
     }
   }
 
-  $('#ship-body').addEventListener('input', () => {
-    $('#ship-rate').innerHTML = '';
-    clearTimeout(ship.validateTimer);
-    ship.validateTimer = setTimeout(validateShipForm, 400);
-  });
-  $('#ship-body').addEventListener('change', () => { clearTimeout(ship.validateTimer); validateShipForm(); });
-  $('#ship-body').addEventListener('click', (e) => {
-    if (e.target.closest('[data-goto-settings]')) { e.preventDefault(); dialog.close(); showTab('settings'); }
-  });
-
-  $('#ship-foot').addEventListener('click', async (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    if (btn.id === 'ship-quote') {
-      await withBusy(btn, async () => {
-        const q = await api('/order/quote', { method: 'POST', body: { orderId: ship.orderId, overrides: readShipForm() } });
-        $('#ship-rate').innerHTML = q.available
-          ? `<div class="notice info rate"><span>India Post rate (${esc(q.articleType)})</span><strong>₹ ${esc(q.total)}</strong>
-              <span class="muted">base ₹ ${esc(q.baseTariff)} · tax ₹ ${esc(q.tax)} · chargeable ${esc(q.chargeableWeight)} g${q.deliveryType ? ` · ${esc(q.deliveryType)}` : ''}</span></div>`
-          : `<div class="notice info">${esc(q.message)}</div>`;
-      });
+  $('#ship-body').addEventListener('input', (e) => {
+    if (e.target.name === 'trackingNumber') {
+      const problem = markAwbInput(e.target);
+      $('#awb-msg').textContent = e.target.value.trim().length >= 13 ? problem || '' : '';
+      return;
     }
-    if (btn.dataset.download) downloadLabel(Number(btn.dataset.download), btn.dataset.awb, btn);
-    if (btn.dataset.print) printLabel(Number(btn.dataset.print), btn.dataset.awb, btn);
+    if (!e.target.name || e.target.name === 'bookingDate') return;
+    clearTimeout(ship.timer);
+    ship.timer = setTimeout(revalidate, 400);
+  });
+  $('#ship-body').addEventListener('change', (e) => {
+    if (e.target.name && !['trackingNumber', 'bookingDate'].includes(e.target.name)) { clearTimeout(ship.timer); revalidate(); }
   });
 
-  $('#ship-form').addEventListener('submit', (e) => {
+  $('#ship-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const submit = $('#ship-submit');
     if (!submit || submit.disabled) return;
-    withBusy(submit, async () => {
-      const { result, shipment } = await api('/order/ship', { method: 'POST', body: { orderId: ship.orderId, overrides: readShipForm() } });
-      if (shipment && !canBook(shipment)) {
-        ship.draft.shipment = shipment;
-        renderBooked(shipment, result.warnings);
-        toast(`Booked · ${shipment.barcode}`);
-      } else {
-        ship.draft.shipment = shipment;
-        showErrors(result?.errors?.length ? result.errors : ['India Post did not accept the shipment']);
-        toast('India Post rejected the shipment', true);
-      }
-      loadOrders({ keepSelection: true });
-    });
+    const input = $('#ship-body [name=trackingNumber]');
+    const problem = input.value.trim() ? markAwbInput(input) : 'Enter the India Post tracking number';
+    if (problem) { $('#awb-msg').textContent = problem; input.focus(); return; }
+    const label = submit.textContent;
+    submit.disabled = true; submit.textContent = 'Saving…';
+    try {
+      const { shipment, warnings } = await api('/order/save', { method: 'POST', body: { orderId: ship.orderId, ...readForm() } });
+      ship.draft.shipment = shipment;
+      renderSaved(shipment, warnings, true);
+      toast(`${ship.draft.order.name} saved · ${shipment.barcode}`);
+      loadOrders();
+    } catch (err) {
+      $('#awb-msg').textContent = err.message;
+      toast(err.message, true);
+      submit.disabled = false; submit.textContent = label;
+    }
   });
 
-  function renderBooked(s, warnings = s.errors) {
-    $('#ship-title').textContent = 'India Post shipment';
-    const trackUrl = state.trackingPageUrl ? `${state.trackingPageUrl}?awb=${encodeURIComponent(s.barcode)}` : '';
+  function renderSaved(s, warnings = s.warnings, justSaved = false) {
+    const { order } = ship.draft;
+    $('#ship-title').textContent = `${order.name} · India Post`;
     $('#ship-body').innerHTML = `
-      <div class="notice ok">Shipment created with India Post${s.fulfilled ? ' and the order is marked fulfilled in Shopify' : ''}.</div>
-      ${warnings?.length ? `<div class="notice bad"><ul>${warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}
-      <span class="muted">Article number</span>
+      ${justSaved ? `<div class="notice ok">Saved${s.fulfilled ? ' — the order is fulfilled in Shopify with this tracking number' : ''}.</div>` : ''}
+      ${warnings?.length ? `<div class="notice warn"><ul>${warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}
+      <span class="muted">Tracking number</span>
       <div class="awb-big">${esc(s.barcode)}</div>
       <div class="kv">
         <div><span>Status</span>${badge(s.status)}</div>
-        <div><span>Product</span>${esc(s.articleType || '')}</div>
-        <div><span>Tariff</span>${s.tariff != null ? `₹ ${esc(s.tariff)}` : '—'}</div>
-        <div><span>Booked</span>${esc(fmtDate(s.bookedAt))}</div>
+        <div><span>Booking date</span>${esc(fmtDay(s.bookedAt))}</div>
+        <div><span>Shopify</span>${s.fulfilled ? 'Fulfilled' : 'Not fulfilled'}</div>
+        <div><span>Excel</span>${s.exportedAt ? `Downloaded ${esc(fmtDay(s.exportedAt))}` : 'Not downloaded yet'}</div>
       </div>
-      ${s.lastEvent ? `<p><strong>Latest:</strong> ${esc(s.lastEvent)} <span class="muted">${esc(fmtDate(s.lastEventAt))}</span></p>` : ''}
-      ${trackUrl ? `<p class="muted">Customer tracking page: <a href="${esc(trackUrl)}" target="_blank" rel="noopener">${esc(trackUrl)}</a></p>` : ''}`;
+      ${s.lastEvent ? `<p><strong>Latest:</strong> ${esc(s.lastEvent)} <span class="muted">${esc(fmtDate(s.lastEventAt))}</span></p>` : ''}`;
     $('#ship-foot').innerHTML = `
-      <button type="button" class="btn" data-print="${s.id}" data-awb="${esc(s.barcode)}">Print label</button>
-      <span class="spacer"></span>
-      <button type="button" class="btn" data-close>Close</button>
-      <button type="button" class="btn primary" data-download="${s.id}" data-awb="${esc(s.barcode)}">Download label</button>`;
+      <button type="button" class="btn" id="ship-edit">Edit</button>
+      <button type="button" class="btn primary" data-close>Done</button>`;
   }
 
+  $('#ship-foot').addEventListener('click', (e) => {
+    if (e.target.closest('#ship-edit')) renderForm();
+  });
   dialog.addEventListener('click', (e) => {
     if (e.target.closest('[data-close]') || e.target === dialog) dialog.close();
   });
 
-  // ---- shipments ----
-  async function loadShipments() {
+  // ---- created orders + Excel ----
+  function selectedForExport() {
+    const from = $('#exp-from').value;
+    const to = $('#exp-to').value;
+    const onlyNew = $('#exp-new').checked;
+    return state.shipments.filter((s) => {
+      if (!s.bookedAt) return false;
+      const day = istDay(s.bookedAt);
+      if (from && day < from) return false;
+      if (to && day > to) return false;
+      if (onlyNew && s.exportedAt) return false;
+      return true;
+    });
+  }
+
+  function renderCreated() {
+    const rows = selectedForExport();
+    $('#exp-count').textContent = `${rows.length} order${rows.length === 1 ? '' : 's'}`;
+    $('#download-excel').disabled = rows.length === 0;
+    $('#created-body').innerHTML = rows.length
+      ? rows.map((s) => `<tr>
+          <td>${esc(fmtDay(s.bookedAt))}</td>
+          <td><strong>${esc(s.orderName)}</strong></td>
+          <td><code>${esc(s.barcode)}</code></td>
+          <td class="wrap">${esc(s.receiver?.name || '')}<div class="muted">${esc(s.receiver?.city || '')}${s.receiver?.pincode ? ` · ${esc(s.receiver.pincode)}` : ''}</div></td>
+          <td>${badge(s.status)}${s.lastEvent ? `<div class="muted small">${esc(s.lastEvent)}</div>` : ''}</td>
+          <td>${s.exportedAt ? esc(fmtDay(s.exportedAt)) : '<span class="muted">—</span>'}</td>
+          <td class="actions"><button class="btn" data-open="${esc(s.orderId)}">Edit</button></td>
+        </tr>`).join('')
+      : '<tr><td colspan="7" class="muted">No created orders for these dates.</td></tr>';
+  }
+
+  async function loadCreated() {
     try {
       const { shipments } = await api('/shipments');
       state.shipments = shipments;
-      $('#shipments-body').innerHTML = shipments.length
-        ? shipments.map((s) => `<tr>
-            <td><strong>${esc(s.orderName)}</strong></td>
-            <td><code>${esc(s.barcode)}</code></td>
-            <td>${esc(s.articleType || '')}</td>
-            <td>${badge(s.status)}</td>
-            <td class="wrap">${esc(s.lastEvent || '')}<div class="muted">${esc(fmtDate(s.lastEventAt))}</div></td>
-            <td>${s.tariff != null ? `₹ ${esc(s.tariff)}` : ''}</td>
-            <td><button class="btn" data-detail="${s.id}">Details</button> ${s.bookedAt ? `<button class="btn" data-download="${s.id}" data-awb="${esc(s.barcode)}">Download label</button>` : ''}</td>
-          </tr>`).join('')
-        : '<tr><td colspan="7" class="muted">No shipments yet.</td></tr>';
+      renderCreated();
     } catch (err) {
       toast(err.message, true);
     }
   }
 
-  $('#shipments-body').addEventListener('click', async (e) => {
-    const dl = e.target.closest('[data-download]');
-    if (dl) return downloadLabel(Number(dl.dataset.download), dl.dataset.awb, dl);
-    const detailBtn = e.target.closest('[data-detail]');
-    if (!detailBtn) return;
-    const { shipment, events } = await api(`/shipments/${detailBtn.dataset.detail}`);
-    const box = $('#shipment-detail');
-    box.hidden = false;
-    box.innerHTML = `<h2>${esc(shipment.orderName)} · <code>${esc(shipment.barcode)}</code> ${badge(shipment.status)}</h2>
-      ${shipment.errors?.length ? `<div class="err">${shipment.errors.map(esc).join('<br>')}</div>` : ''}
-      <div class="toolbar"><button class="btn" data-refresh="${shipment.id}">Refresh tracking</button></div>
-      ${events.length ? `<ul class="events">${events.map((ev) => `<li><strong>${esc(ev.description)}</strong> — ${esc(ev.office || '')}
-        <span class="muted">${esc(fmtDate(ev.happened_at))}${ev.remarks ? ` · ${esc(ev.remarks)}` : ''}</span></li>`).join('')}</ul>`
-        : '<p class="muted">No tracking events yet.</p>'}`;
-    box.scrollIntoView({ behavior: 'smooth' });
+  ['#exp-from', '#exp-to', '#exp-new'].forEach((sel) => $(sel).addEventListener('change', renderCreated));
+  $('#created-body').addEventListener('click', (e) => {
+    const open = e.target.closest('[data-open]');
+    if (open) openOrder(open.dataset.open);
   });
+  dialog.addEventListener('close', () => { if (!$('#tab-created').hidden) loadCreated(); });
 
-  $('#shipment-detail').addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-refresh]');
-    if (!btn) return;
-    btn.disabled = true;
+  $('#download-excel').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Preparing…';
     try {
-      const r = await api('/shipments/refresh', { method: 'POST', body: { shipmentIds: [Number(btn.dataset.refresh)] } });
-      toast(`${r.newEvents} new event(s)`);
-      await loadShipments();
-      $(`[data-detail="${btn.dataset.refresh}"]`)?.click();
+      const params = new URLSearchParams({ from: $('#exp-from').value, to: $('#exp-to').value, onlyNew: $('#exp-new').checked ? '1' : '0' });
+      const res = await api(`/export?${params}`, { raw: true });
+      const blob = await res.blob();
+      const name = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1] || 'india-post-orders.xlsx';
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href: url, download: name });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      toast(`Excel downloaded (${res.headers.get('X-Row-Count') || 0} orders)`);
+      loadCreated();
     } catch (err) {
       toast(err.message, true);
     } finally {
-      btn.disabled = false;
-    }
-  });
-
-  $('#reload-shipments').addEventListener('click', loadShipments);
-  $('#refresh-tracking').addEventListener('click', async (e) => {
-    e.currentTarget.disabled = true;
-    try {
-      const r = await api('/shipments/refresh', { method: 'POST', body: {} });
-      toast(`Checked ${r.checked} shipment(s), ${r.newEvents} new event(s)`);
-      loadShipments();
-    } catch (err) {
-      toast(err.message, true);
-    } finally {
-      e.currentTarget.disabled = false;
+      btn.disabled = false; btn.textContent = label;
     }
   });
 
@@ -676,7 +620,6 @@
     keys.slice(0, -1).forEach((k) => (o = o[k] ??= {}));
     o[keys.at(-1)] = value;
   }
-
   function fillSettings(settings) {
     $$('#settings-form [name]').forEach((el) => {
       const value = getPath(settings, el.name);
@@ -684,7 +627,6 @@
       else el.value = value ?? '';
     });
   }
-
   function readSettings() {
     const out = {};
     $$('#settings-form [name]').forEach((el) => {
@@ -694,13 +636,12 @@
     });
     return out;
   }
-
-  function isConfigured(s) {
-    return Boolean(s.indiaPost.username && s.indiaPost.password && s.indiaPost.bulkCustomerId && s.barcode.seriesStart && s.barcode.seriesEnd && s.officeId && s.sender.pincode);
-  }
-
-  function showSeries(series) {
-    $('#series-usage').textContent = series ? `${series.remaining} of ${series.total} article numbers remaining.` : '';
+  function showTrackingInfo(boot) {
+    $('#tracking-info').hidden = !boot.trackingEnabled;
+    const link = $('#tracking-page');
+    link.href = boot.trackingPageUrl;
+    link.textContent = boot.trackingPageUrl;
+    $('#webhook-url').textContent = boot.webhookUrl;
   }
 
   $('#settings-form').addEventListener('submit', async (e) => {
@@ -709,58 +650,35 @@
       const { settings } = await api('/settings', { method: 'PUT', body: { settings: readSettings() } });
       fillSettings(settings);
       state.settings = settings;
-      $('#setup-banner').hidden = isConfigured(settings);
-      const boot = await api('/bootstrap');
-      showSeries(boot.series);
+      showTrackingInfo(await api('/bootstrap'));
       toast('Settings saved');
     } catch (err) {
       toast(err.message, true);
     }
   });
-
   $('#test-connection').addEventListener('click', async () => {
     $('#test-result').textContent = 'Testing… (save first if you changed the login)';
     try {
       const r = await api('/settings/test', { method: 'POST' });
-      $('#test-result').textContent = `${r.message}${r.offices?.length ? ` · ${r.offices.length} delivery office(s) at sender pincode` : ''}`;
+      $('#test-result').textContent = r.message;
     } catch (err) {
       $('#test-result').textContent = err.message;
     }
   });
 
-  $('#find-office').addEventListener('click', async () => {
-    const select = $('#office-results');
-    try {
-      const { offices } = await api(`/pincode/${encodeURIComponent($('#office-pin').value.trim())}`);
-      select.innerHTML = `<option value="">${offices.length ? 'Choose an office…' : 'No eligible offices'}</option>` +
-        offices.map((o) => `<option value="${esc(o.id)}">${esc(o.name)} (${esc(o.id)}) — ${esc(o.city)}</option>`).join('');
-      select.hidden = false;
-    } catch (err) {
-      toast(err.message, true);
-    }
-  });
-  $('#office-results').addEventListener('change', (e) => {
-    if (e.target.value) $('[name="officeId"]').value = e.target.value;
-  });
-
   // ---- boot ----
   (async () => {
+    $('#quick-date').value = todayIst();
     try {
       const boot = await api('/bootstrap');
       state.statusLabels = boot.statusLabels;
       state.products = boot.products;
       state.settings = boot.settings;
-      state.trackingPageUrl = boot.trackingPageUrl;
       $('#product-select').innerHTML = Object.entries(boot.products).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join('');
       fillSettings(boot.settings);
-      showSeries(boot.series);
-      $('#setup-banner').hidden = isConfigured(boot.settings);
-      const link = $('#tracking-page');
-      link.href = boot.trackingPageUrl;
-      link.textContent = boot.trackingPageUrl;
-      $('#webhook-url').textContent = boot.webhookUrl;
+      showTrackingInfo(boot);
 
-      // Opened from Shopify admin: order page "More actions" (?id=) or orders list bulk action (?ids[]=).
+      // Opened from Shopify admin: order page (?id=) or orders list selection (?ids[]=).
       const params = new URLSearchParams(location.search);
       const linked = [...params.getAll('id'), ...params.getAll('ids[]'), ...params.getAll('ids')]
         .flatMap((v) => v.split(','))
@@ -770,16 +688,12 @@
       if (linked.length > 1) {
         state.focusIds = [...new Set(linked)];
         const banner = $('#focus-banner');
-        banner.innerHTML = `${state.focusIds.length} orders selected in Shopify. Review them, then <strong>Book selected</strong> and <strong>Download labels</strong>. <a href="#" class="linklike" id="show-all">Show all orders</a>`;
+        banner.innerHTML = `Showing the ${state.focusIds.length} orders you selected in Shopify. <a href="#" class="linklike" id="show-all">Show all orders</a>`;
         banner.hidden = false;
         $('#show-all').addEventListener('click', (e) => { e.preventDefault(); state.focusIds = []; banner.hidden = true; loadOrders(); });
-        await loadOrders();
-        state.selected = new Set(state.orders.map((o) => o.id));
-        renderOrders();
-      } else {
-        loadOrders();
-        if (linked.length === 1) openShipment(linked[0]);
       }
+      await loadOrders();
+      if (linked.length === 1) openOrder(linked[0]);
     } catch (err) {
       toast(err.message, true);
     }

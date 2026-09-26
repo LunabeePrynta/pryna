@@ -92,62 +92,6 @@ export class IndiaPostClient {
     return this.requestJson('GET', '/v1/pincode-search', { query: { pincode, 'office-type': 'post' } });
   }
 
-  speedPostTariff({ weight, sourcePincode, destinationPincode, length = 0, width = 0, height = 0, ins, pod }) {
-    return this.requestJson('GET', '/v1/speed-post/tariffs', {
-      query: {
-        'product-code': 'SP',
-        weight,
-        'source-pincode': sourcePincode,
-        'destination-pincode': destinationPincode,
-        length,
-        width,
-        height,
-        INS: ins,
-        POD: pod,
-      },
-    });
-  }
-
-  businessParcelTariff({ weight, sourcePincode, destinationPincode, length = 0, width = 0, height = 0, ins }) {
-    return this.requestJson('GET', '/v1/business-parcel-tariff/calculate', {
-      query: {
-        'product-code': 'BP',
-        weight,
-        'source-pincode': sourcePincode,
-        'destination-pincode': destinationPincode,
-        length,
-        width,
-        height,
-        ins,
-      },
-    });
-  }
-
-  /** Books up to 1000 articles in one call. Returns the raw response with valid_articles / error_articles. */
-  bookArticles(customerId, articles) {
-    if (!articles.length) throw new IndiaPostError('No articles to book');
-    if (articles.length > 1000) throw new IndiaPostError('Booking API accepts at most 1000 articles per request');
-    return this.requestJson('POST', `/process-articles/${encodeURIComponent(customerId)}`, { json: { articles } });
-  }
-
-  /** Generates an address label PDF for one or more articles. Returns a Buffer. */
-  async createLabels(labels) {
-    const res = await this.request('POST', '/v1/label/create/domestic', {
-      json: labels,
-      accept: 'application/pdf, application/json',
-    });
-    const type = res.headers.get('content-type') ?? '';
-    if (!res.ok || type.includes('json')) {
-      const body = await readBody(res);
-      throw new IndiaPostError(`Label generation failed: ${describe(body) || res.status}`, { status: res.status, body });
-    }
-    const buffer = Buffer.from(await res.arrayBuffer());
-    if (buffer.subarray(0, 4).toString() !== '%PDF') {
-      throw new IndiaPostError('Label generation returned a non-PDF response', { status: res.status });
-    }
-    return buffer;
-  }
-
   /** Tracking for up to 500 articles booked under this customer. */
   async trackBulk(barcodes) {
     if (!barcodes.length) return [];

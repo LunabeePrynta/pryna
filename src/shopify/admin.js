@@ -65,6 +65,15 @@ const CREATE_FULFILLMENT_EVENT = `
   }
 `;
 
+const UPDATE_TRACKING = `
+  mutation UpdateTracking($fulfillmentId: ID!, $trackingInfoInput: FulfillmentTrackingInput!, $notifyCustomer: Boolean) {
+    fulfillmentTrackingInfoUpdate(fulfillmentId: $fulfillmentId, trackingInfoInput: $trackingInfoInput, notifyCustomer: $notifyCustomer) {
+      fulfillment { id }
+      userErrors { field message }
+    }
+  }
+`;
+
 const SET_METAFIELDS = `
   mutation SetMetafields($metafields: [MetafieldsSetInput!]!) {
     metafieldsSet(metafields: $metafields) {
@@ -180,6 +189,19 @@ export class ShopifyAdmin {
       ids.push(fulfillment.id);
     }
     return ids;
+  }
+
+  /** Replaces the tracking number on existing fulfillments (e.g. after a typo). */
+  async updateTracking(fulfillmentIds, { number, url, notifyCustomer }) {
+    for (const fulfillmentId of fulfillmentIds) {
+      const data = await this.graphql(UPDATE_TRACKING, {
+        fulfillmentId,
+        trackingInfoInput: { company: 'India Post', number, url },
+        notifyCustomer: Boolean(notifyCustomer),
+      });
+      const { userErrors } = data.fulfillmentTrackingInfoUpdate;
+      if (userErrors.length) throw new ShopifyError(userErrors.map((e) => e.message).join('; '), userErrors);
+    }
   }
 
   async createFulfillmentEvent(fulfillmentId, { status, message, happenedAt, city, zip }) {

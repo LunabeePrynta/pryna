@@ -122,6 +122,7 @@ export async function refreshShipments(ctx, shop, shipments) {
 /** Background job: refresh every in-flight shipment of every installed shop. */
 export async function pollAllShops(ctx) {
   for (const shop of ctx.db.listActiveShops()) {
+    if (!ctx.hasTracking(shop)) continue;
     const active = ctx.db.listActiveShipments(shop);
     if (!active.length) continue;
     try {
@@ -159,7 +160,7 @@ export async function lookupTracking(ctx, shop, rawQuery) {
   let delivered = false;
   const stale = !shipment?.last_polled_at || Date.now() - Date.parse(shipment.last_polled_at) > FRESH_MS;
 
-  if (!shipment || stale) {
+  if ((!shipment || stale) && ctx.hasTracking(shop)) {
     try {
       const [item] = await ctx.indiaPostFor(shop).trackBulk([awb]);
       if (item) {
@@ -180,6 +181,8 @@ export async function lookupTracking(ctx, shop, rawQuery) {
       if (!shipment) return { awb, error: 'Tracking is temporarily unavailable. Please try again in a few minutes.' };
     }
   }
+
+  if (!shipment) return { awb, error: 'No shipment found with this tracking number. Please check the number and try again.' };
 
   const events = ctx.db.listEvents(shipment.id).map((e) => ({
     description: e.description,

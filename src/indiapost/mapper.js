@@ -43,8 +43,6 @@ export function defaultSettings() {
         '48_SPEEDPOST_DOC': '',
       },
     },
-    // AWB series allotted by India Post, e.g. ET21433001XIN → ET21434000XIN.
-    barcode: { seriesStart: '', seriesEnd: '' },
     product: 'SPEED_POST',
     // DROPOFF: you hand articles in at a post office. PICKUP: India Post collects from your address.
     mode: 'DROPOFF',
@@ -71,8 +69,7 @@ export function defaultSettings() {
     },
     cod: { enabled: true },
     insurance: { enabled: false, minOrderValue: 5000 },
-    label: { size: 'A6', transmissionMode: 'S', bookingOfficeName: '', bookingOfficePin: '' },
-    automation: { autoPush: false, autoFulfill: true, notifyCustomer: true },
+    automation: { notifyCustomer: true },
   };
 }
 
@@ -163,12 +160,6 @@ export function pickupScheduleDate(slot, date = new Date()) {
   const [hour] = String(slot || '10:00').split(':').map(Number);
   const h12 = hour % 12 === 0 ? 12 : hour % 12;
   return `${pad(t.getUTCMonth() + 1)}/${pad(t.getUTCDate())}/${t.getUTCFullYear()} ${pad(h12)}:00:00 ${hour < 12 ? 'AM' : 'PM'}`;
-}
-
-/** DD-MM-YYYY HH:mm:ss in IST, as used by the label API. */
-export function labelDateTime(date = new Date()) {
-  const t = nowInIst(date);
-  return `${pad(t.d)}-${pad(t.m)}-${t.y} ${pad(t.h)}:${pad(t.min)}:${pad(t.s)}`;
 }
 
 function isCashOnDelivery(order) {
@@ -357,58 +348,4 @@ export function buildArticle(order, settings, barcode, overrides = {}) {
   };
 
   return { article, errors };
-}
-
-/** Builds a payload item for the Address Label Generation API from a booked article. */
-export function buildLabel(article, settings, { tariff, bookingRef, bookedAt } = {}) {
-  const service = article.article_type === 'BUSINESS_PARCEL' ? 'BP' : 'SP';
-  const weight = Number(article.physical_weight);
-  const volumetric = Math.round((Number(article.length) * Number(article.breadth_diameter) * Number(article.height)) / 5);
-  return {
-    customer_id: Number(article.bulk_customer_id),
-    destination_pin: article.receiver_pincode,
-    booking_datetime: labelDateTime(bookedAt ? new Date(bookedAt) : new Date()),
-    channel_type: 'E',
-    user_type: 'R',
-    user_id: Number(article.bulk_customer_id),
-    barcode_no: article.barcode_no,
-    service_type: service,
-    booking_type: 'COMMERCIAL',
-    article_length: article.length,
-    article_breadth: article.breadth_diameter,
-    article_height: article.height,
-    charged_weight: Math.max(weight, isDocument(article.article_type) ? 0 : volumetric),
-    physical_weight: weight,
-    volumetric_weight: volumetric,
-    insurance_flag: article.insurance_type === 'DOP',
-    insurance_value: Number(article.value_of_insurance) || 0,
-    recipient_name: article.receiver_name,
-    recipient_mobile: article.receiver_mobile_no,
-    recipient_addressl1: article.receiver_add_line_1,
-    recipient_addressl2: article.receiver_add_line_2,
-    recipient_addressl3: article.receiver_add_line_3,
-    recipient_city: article.receiver_city,
-    recipient_pin: article.receiver_pincode,
-    recipient_state: article.receiver_state,
-    sender_name: article.sender_name,
-    sender_mobile: article.sender_mobile_no,
-    sender_addressl1: article.sender_add_line_1,
-    sender_addressl2: article.sender_add_line_2,
-    sender_addressl3: article.sender_add_line_3,
-    sender_city: article.sender_city,
-    sender_pin: article.sender_pincode,
-    sender_state: article.sender_state,
-    transmission_mode: settings.label.transmissionMode || 'S',
-    payment_mode: 'CO',
-    booking_office_name: settings.label.bookingOfficeName,
-    booking_office_pin: String(settings.label.bookingOfficePin || article.sender_pincode),
-    size: settings.label.size || 'A6',
-    total_amount: Number(tariff) || 0,
-    payment_status: 'PC',
-    value_added_services: article.codr_cod === 'COD' ? `COD ${article.value_for_codr_cod}` : '',
-    identifier: 'Domestic',
-    bkg_ref_id: bookingRef ? String(bookingRef) : '',
-    priority: false,
-    registered_flag: false,
-  };
 }

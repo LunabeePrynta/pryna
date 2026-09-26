@@ -26,20 +26,20 @@ test('caches the 15 minute token and re-logs in after a 401', async () => {
   assert.equal(data.length, 1);
 });
 
-test('surfaces India Post validation messages', async () => {
+test('surfaces India Post error messages', async () => {
   const fetchImpl = async (url) =>
     String(url).endsWith('/login')
       ? json({ success: true, data: { access_token: 't', expires_in: 900 } })
-      : json({ success: false, message: 'Request validation failed', errors: [{ msg: 'Articles must be an array with 1 to 100,000 items' }] }, 400);
+      : json({ success: false, message: 'Request validation failed', errors: [{ msg: 'bulk must be an array' }] }, 400);
   const client = new IndiaPostClient({ baseUrl: 'https://ip.test', username: 'u', password: 'p', fetchImpl });
-  await assert.rejects(client.bookArticles('3000064781', [{}]), (err) => {
+  await assert.rejects(client.trackBulk(['RK775227016IN']), (err) => {
     assert.ok(err instanceof IndiaPostError);
-    assert.match(err.message, /Articles must be an array/);
+    assert.match(err.message, /bulk must be an array/);
     return true;
   });
 });
 
-test('rejects failed logins and non-PDF labels', async () => {
+test('rejects failed logins', async () => {
   const bad = new IndiaPostClient({
     baseUrl: 'https://ip.test',
     username: 'u',
@@ -47,15 +47,4 @@ test('rejects failed logins and non-PDF labels', async () => {
     fetchImpl: async () => json({ success: false, message: 'Invalid credentials' }, 401),
   });
   await assert.rejects(bad.login(), /Invalid credentials/);
-
-  const client = new IndiaPostClient({
-    baseUrl: 'https://ip.test',
-    username: 'u',
-    password: 'p',
-    fetchImpl: async (url) =>
-      String(url).endsWith('/login')
-        ? json({ success: true, data: { access_token: 't', expires_in: 900 } })
-        : new Response('<html>oops</html>', { headers: { 'content-type': 'text/html' } }),
-  });
-  await assert.rejects(client.createLabels([{}]), /non-PDF/);
 });

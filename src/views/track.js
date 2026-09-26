@@ -81,7 +81,8 @@ export function renderTrackingContent({ query = '', result = null, formAction, h
               <small>${esc(formatIst(e.happenedAt))}${e.office ? ` · ${esc(e.office)}` : ''}${e.remarks ? ` · ${esc(e.remarks)}` : ''}</small></li>`,
           )
           .join('')}</ol>`
-      : '<p class="ipt-sub">Your shipment is registered with India Post. Updates appear here once the article is scanned at the post office.</p>';
+      : `<p class="ipt-sub">Your shipment has been handed to India Post. Detailed updates appear once the article is scanned at the post office.
+          You can also track it on the <a href="https://www.indiapost.gov.in" target="_blank" rel="noopener">India Post website</a>.</p>`;
     body = `<div class="ipt-card">
       <div class="ipt-head"><div><span class="ipt-sub">India Post article</span><div class="ipt-awb">${esc(result.awb)}</div></div>
       <span class="ipt-badge ${tone}">${esc(result.statusLabel)}</span></div>
