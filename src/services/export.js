@@ -51,10 +51,15 @@ const ORDER_COLUMNS = [
 const istDate = (iso) => new Date(new Date(iso).getTime() + 330 * 60_000).toISOString().slice(0, 10);
 
 /**
- * Filters saved shipments by booking date (YYYY-MM-DD, India time, inclusive) and
- * optionally only those not downloaded before.
+ * Picks the shipments to export: the ticked ones (`ids`) or, when none are ticked, those in the
+ * booking date range (YYYY-MM-DD, India time, inclusive), optionally only those not downloaded before.
  */
-export function selectShipments(shipments, { from, to, onlyNew } = {}) {
+export function selectShipments(shipments, { from, to, onlyNew, ids } = {}) {
+  // Ticked orders win over the date filters.
+  if (ids?.length) {
+    const wanted = new Set(ids);
+    return shipments.filter((s) => wanted.has(s.id));
+  }
   return shipments.filter((s) => {
     const day = istDate(s.booked_at);
     if (from && day < from) return false;
@@ -128,8 +133,8 @@ export async function buildWorkbook(shipments) {
 }
 
 /** Selects, builds and (optionally) marks shipments as downloaded. */
-export async function exportShipments(ctx, shop, { from, to, onlyNew, markExported } = {}) {
-  const shipments = selectShipments(ctx.db.listShipmentsForExport(shop), { from, to, onlyNew });
+export async function exportShipments(ctx, shop, { from, to, onlyNew, ids, markExported } = {}) {
+  const shipments = selectShipments(ctx.db.listShipmentsForExport(shop), { from, to, onlyNew, ids });
   const buffer = await buildWorkbook(shipments);
   if (markExported) ctx.db.markExported(shop, shipments.map((s) => s.id), new Date().toISOString());
   return { buffer, count: shipments.length };

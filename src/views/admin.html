@@ -130,11 +130,13 @@
         <label class="check"><input type="checkbox" id="exp-new"> Only not downloaded yet</label>
         <span class="spacer"></span>
         <span id="exp-count" class="muted"></span>
+        <button class="btn" id="exp-clear" hidden>Clear ticks</button>
         <button class="btn primary" id="download-excel">Download Excel</button>
       </div>
+      <p class="muted small" style="margin:-4px 0 10px">Tick the orders you want in the Excel file, or leave all unticked to download every order in the dates above.</p>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Booking date</th><th>Order</th><th>Tracking number</th><th>Deliver to</th><th>Status</th><th>Downloaded</th><th></th></tr></thead>
+          <thead><tr><th><input type="checkbox" id="exp-all" aria-label="Tick all orders"></th><th>Booking date</th><th>Order</th><th>Tracking number</th><th>Deliver to</th><th>Status</th><th>Downloaded</th><th></th></tr></thead>
           <tbody id="created-body"></tbody>
         </table>
       </div>
@@ -216,7 +218,7 @@
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const toast = (msg, isError = false) => (window.shopify?.toast ? shopify.toast.show(msg, { isError }) : alert(msg));
-  const state = { statusLabels: {}, products: {}, settings: null, orders: [], shipments: [], focusIds: [] };
+  const state = { statusLabels: {}, products: {}, settings: null, orders: [], shipments: [], focusIds: [], ticked: new Set() };
 
   async function api(path, { method = 'GET', body, raw = false } = {}) {
     const res = await fetch(`/api${path}`, {
@@ -558,10 +560,9 @@
 
   function renderCreated() {
     const rows = selectedForExport();
-    $('#exp-count').textContent = `${rows.length} order${rows.length === 1 ? '' : 's'}`;
-    $('#download-excel').disabled = rows.length === 0;
     $('#created-body').innerHTML = rows.length
       ? rows.map((s) => `<tr>
+          <td><input type="checkbox" data-tick="${s.id}" ${state.ticked.has(s.id) ? 'checked' : ''} aria-label="Tick ${esc(s.orderName)}"></td>
           <td>${esc(fmtDay(s.bookedAt))}</td>
           <td><strong>${esc(s.orderName)}</strong></td>
           <td><code>${esc(s.barcode)}</code></td>
@@ -570,7 +571,29 @@
           <td>${s.exportedAt ? esc(fmtDay(s.exportedAt)) : '<span class="muted">—</span>'}</td>
           <td class="actions"><button class="btn" data-open="${esc(s.orderId)}">Edit</button></td>
         </tr>`).join('')
-      : '<tr><td colspan="7" class="muted">No created orders for these dates.</td></tr>';
+      : '<tr><td colspan="8" class="muted">No created orders for these dates.</td></tr>';
+    updateExportButton();
+  }
+
+  /** Ticked orders that are still visible with the current filters. */
+  function tickedVisible() {
+    const visible = new Set(selectedForExport().map((s) => s.id));
+    return [...state.ticked].filter((id) => visible.has(id));
+  }
+
+  function updateExportButton() {
+    const rows = selectedForExport();
+    const ticked = tickedVisible();
+    const btn = $('#download-excel');
+    btn.textContent = ticked.length ? `Download Excel (${ticked.length} ticked)` : 'Download Excel';
+    btn.disabled = rows.length === 0;
+    $('#exp-count').textContent = ticked.length
+      ? `${ticked.length} of ${rows.length} ticked`
+      : `${rows.length} order${rows.length === 1 ? '' : 's'}`;
+    $('#exp-clear').hidden = ticked.length === 0;
+    const all = $('#exp-all');
+    all.checked = rows.length > 0 && ticked.length === rows.length;
+    all.indeterminate = ticked.length > 0 && ticked.length < rows.length;
   }
 
   async function loadCreated() {
@@ -584,6 +607,19 @@
   }
 
   ['#exp-from', '#exp-to', '#exp-new'].forEach((sel) => $(sel).addEventListener('change', renderCreated));
+  $('#created-body').addEventListener('change', (e) => {
+    const box = e.target.closest('[data-tick]');
+    if (!box) return;
+    const id = Number(box.dataset.tick);
+    box.checked ? state.ticked.add(id) : state.ticked.delete(id);
+    updateExportButton();
+  });
+  $('#exp-all').addEventListener('change', (e) => {
+    const visible = selectedForExport().map((s) => s.id);
+    visible.forEach((id) => (e.target.checked ? state.ticked.add(id) : state.ticked.delete(id)));
+    renderCreated();
+  });
+  $('#exp-clear').addEventListener('click', () => { state.ticked.clear(); renderCreated(); });
   $('#created-body').addEventListener('click', (e) => {
     const open = e.target.closest('[data-open]');
     if (open) openOrder(open.dataset.open);
@@ -595,7 +631,10 @@
     const label = btn.textContent;
     btn.disabled = true; btn.textContent = 'Preparing…';
     try {
-      const params = new URLSearchParams({ from: $('#exp-from').value, to: $('#exp-to').value, onlyNew: $('#exp-new').checked ? '1' : '0' });
+      const ticked = tickedVisible();
+      const params = ticked.length
+        ? new URLSearchParams({ ids: ticked.join(',') })
+        : new URLSearchParams({ from: $('#exp-from').value, to: $('#exp-to').value, onlyNew: $('#exp-new').checked ? '1' : '0' });
       const res = await api(`/export?${params}`, { raw: true });
       const blob = await res.blob();
       const name = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1] || 'india-post-orders.xlsx';
@@ -604,6 +643,7 @@
       document.body.append(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
       toast(`Excel downloaded (${res.headers.get('X-Row-Count') || 0} orders)`);
+      state.ticked.clear();
       loadCreated();
     } catch (err) {
       toast(err.message, true);

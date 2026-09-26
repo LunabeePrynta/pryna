@@ -35,8 +35,9 @@ They don't stop you saving.
 
 ### Created orders & Excel tab
 
-This tab lists every order that has a tracking number. Filter by **From / To** booking date, or tick **Only not
-downloaded yet**, then click **Download Excel**. The file has two sheets:
+This tab lists every order that has a tracking number. **Tick the orders** you want and click **Download Excel
+(N ticked)**: all ticked orders go into one Excel file. With nothing ticked, the file has every order in the
+**From / To** booking dates (optionally **Only not downloaded yet**). The file has two sheets:
 
 | Sheet | Contents |
 | --- | --- |

@@ -250,6 +250,16 @@ test('quick save several orders, then download the Excel sheet', async (t) => {
   assert.equal(upload.getRow(2).getCell(uploadHeader.indexOf('barcode_no') + 1).value, AWB1);
   assert.equal(upload.getRow(2).getCell(uploadHeader.indexOf('contract_id') + 1).value, '41585456');
 
+  // Only the ticked orders go into the file, whatever the date filter says.
+  const { shipments: all } = await callJson('/api/shipments');
+  const second = all.find((s) => s.orderName === '#1002');
+  const ticked = await call(`/api/export?ids=${second.id}&from=2030-01-01&mark=0`);
+  assert.equal(ticked.headers.get('x-row-count'), '1');
+  const tickedBook = new ExcelJS.Workbook();
+  await tickedBook.xlsx.load(Buffer.from(await ticked.arrayBuffer()));
+  assert.equal(tickedBook.getWorksheet('Orders').rowCount, 2);
+  assert.equal(tickedBook.getWorksheet('Orders').getRow(2).getCell(2).value, '#1002');
+
   // Downloaded orders are marked; "only new" then returns none.
   const { shipments } = await callJson('/api/shipments');
   assert.ok(shipments.every((s) => s.exportedAt));

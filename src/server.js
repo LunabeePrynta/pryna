@@ -223,6 +223,11 @@ export function createApp(ctx) {
       from: date(req.query.from),
       to: date(req.query.to),
       onlyNew: req.query.onlyNew === '1',
+      ids: String(req.query.ids ?? '')
+        .split(',')
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n > 0)
+        .slice(0, 1000),
       markExported: req.query.mark !== '0',
     });
     const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
