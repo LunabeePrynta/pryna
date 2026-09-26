@@ -2,6 +2,7 @@
 // and answer public tracking lookups.
 
 import { isValidBarcode, normalizeBarcode } from '../indiapost/barcode.js';
+import { normalizeMobile } from '../indiapost/mapper.js';
 import {
   STATUS_LABELS,
   normalizeTrackingResult,
@@ -231,4 +232,106 @@ function present(awb, { booking, delivered, events, status, orderName }) {
       : null,
     events: events.map((e) => ({ description: e.description, office: e.office, remarks: e.remarks, happenedAt: e.happenedAt })),
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Storefront search: tracking number, order number or mobile number.
+
+const NOT_FOUND_ORDER = "We couldn't find that order. Please check the order number and mobile number.";
+
+function storedResult(ctx, shipment) {
+  const events = ctx.db.listEvents(shipment.id).map((e) => ({
+    description: e.description,
+    office: e.office,
+    remarks: e.remarks,
+    happenedAt: e.happened_at,
+  }));
+  return present(shipment.barcode, {
+    events,
+    delivered: shipment.status === 'DELIVERED',
+    status: shipment.status,
+    orderName: shipment.order_name,
+  });
+}
+
+/** Refreshes stale shipments from India Post (when configured), then returns their results. */
+async function freshResults(ctx, shop, shipments) {
+  if (ctx.hasTracking(shop)) {
+    const stale = shipments.filter((s) => !s.last_polled_at || Date.now() - Date.parse(s.last_polled_at) > FRESH_MS);
+    if (stale.length) {
+      try {
+        await refreshShipments(ctx, shop, stale);
+      } catch (err) {
+        ctx.logger.error(`[track] ${shop}: ${err.message}`);
+      }
+    }
+  }
+  return shipments.map((s) => storedResult(ctx, ctx.db.getShipment(shop, s.id)));
+}
+
+function orderNameCandidates(query) {
+  const bare = query.replace(/^#/, '');
+  return [...new Set([query, `#${bare}`, bare])];
+}
+
+/** An order that exists in Shopify but has no tracking number yet. */
+async function findUnshippedOrder(ctx, shop, candidates) {
+  try {
+    const bare = candidates[candidates.length - 1];
+    const orders = await ctx.adminFor(shop).recentOrders({ first: 5, query: `name:${bare}` });
+    return orders.find((o) => candidates.includes(o.name)) ?? null;
+  } catch (err) {
+    ctx.logger.error(`[track] order search ${shop}: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Customer lookup for the storefront tracking page.
+ * Returns { results: [...] } | { pending: { orderName } } | { error, needMobile? } | null (empty query).
+ */
+export async function searchTracking(ctx, shop, { q, mobile } = {}) {
+  const query = String(q ?? '').trim().slice(0, 30);
+  if (!query) return null;
+  const requireMobile = Boolean(ctx.getSettings(shop).trackingPage?.requireMobileForOrder);
+
+  // 1. India Post tracking number
+  const awb = normalizeBarcode(query);
+  if (/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(awb)) {
+    const result = await lookupTracking(ctx, shop, awb);
+    return result.error ? { error: result.error } : { results: [result] };
+  }
+
+  // 2. Mobile number (10 digits starting 6-9, optional +91 / 0)
+  const phone = normalizeMobile(query);
+  if (phone && query.replace(/\D/g, '').length >= 10) {
+    const shipments = ctx.db.findShipmentsByMobile(shop, phone, 10);
+    if (!shipments.length) {
+      return { error: 'No shipped orders found for this mobile number yet. Orders appear here once they are handed to India Post.' };
+    }
+    return { results: await freshResults(ctx, shop, shipments) };
+  }
+
+  // 3. Order number (#1001, 1001, LB1001 …)
+  if (/^#?[A-Za-z0-9-]{1,20}$/.test(query)) {
+    const verifyPhone = requireMobile ? normalizeMobile(mobile) : null;
+    if (requireMobile && !verifyPhone) return { error: 'Please also enter the mobile number used for the order.', needMobile: true };
+
+    const candidates = orderNameCandidates(query);
+    const shipment = candidates.map((name) => ctx.db.getShipmentByOrderName(shop, name)).find(Boolean);
+    if (shipment) {
+      if (verifyPhone && shipment.article?.receiver_mobile_no !== verifyPhone) return { error: NOT_FOUND_ORDER, needMobile: true };
+      return { results: await freshResults(ctx, shop, [shipment]) };
+    }
+
+    const order = await findUnshippedOrder(ctx, shop, candidates);
+    if (order && !/cancel/i.test(order.fulfillmentStatus ?? '')) {
+      const orderPhones = [order.shippingAddress?.phone, order.phone, order.customer?.phone].map(normalizeMobile).filter(Boolean);
+      if (verifyPhone && !orderPhones.includes(verifyPhone)) return { error: NOT_FOUND_ORDER, needMobile: true };
+      return { pending: { orderName: order.name } };
+    }
+    return { error: requireMobile ? NOT_FOUND_ORDER : `We couldn't find order ${query.startsWith('#') ? query : `#${query}`}. Please check the order number.` };
+  }
+
+  return { error: 'Enter your tracking number (e.g. EB123456785IN), order number (e.g. #1001) or mobile number.' };
 }

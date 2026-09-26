@@ -185,6 +185,22 @@
         </div>
       </div>
 
+      <div class="card">
+        <h2>Customer tracking page</h2>
+        <p class="muted small">Customers can track their parcel on your own website by tracking number, order number or mobile number.</p>
+        <p>Your page: <a id="store-track-link" target="_blank" rel="noopener"></a></p>
+        <label class="check"><input type="checkbox" name="trackingPage.requireMobileForOrder"> Ask for the mobile number too when a customer searches by order number (more private — strangers can't look up orders by guessing numbers)</label>
+        <details style="margin-top:10px">
+          <summary class="linklike">Add it to your store</summary>
+          <ol class="small" style="margin:8px 0;padding-left:18px">
+            <li><strong>Menu link:</strong> Shopify admin → Online Store → Navigation → your main or footer menu → Add menu item → link <code>/apps/track</code>, name “Track order”.</li>
+            <li><strong>Search box on any page</strong> (e.g. a “Track your order” page): paste this into the page's HTML (Show HTML / Custom Liquid section):</li>
+          </ol>
+          <textarea id="track-snippet" readonly rows="5" style="width:100%;font:12px ui-monospace,Menlo,monospace;padding:8px;border:1px solid var(--line);border-radius:8px"></textarea>
+          <button type="button" class="btn" id="copy-snippet" style="margin-top:6px">Copy code</button>
+        </details>
+      </div>
+
       <div class="card" id="ip-card">
         <div class="toolbar" style="margin-bottom:4px">
           <h2 style="margin:0">India Post API connection</h2>
@@ -218,7 +234,6 @@
                 <button type="button" class="btn" id="rotate-webhook">New link</button></div></div>
           </div>
         </div>
-        <p id="tracking-info" class="muted small" hidden>Customer tracking page: <a id="tracking-page" target="_blank" rel="noopener"></a></p>
       </div>
 
       <div class="card">
@@ -768,10 +783,13 @@
     return out;
   }
   function showTrackingInfo(boot) {
-    $('#tracking-info').hidden = !boot.trackingEnabled;
-    const link = $('#tracking-page');
+    const link = $('#store-track-link');
     link.href = boot.trackingPageUrl;
     link.textContent = boot.trackingPageUrl;
+    $('#track-snippet').value = `<form action="/apps/track" method="get" style="display:flex;gap:8px;flex-wrap:wrap">
+  <input name="q" placeholder="Tracking number, order number or mobile" required style="flex:1;min-width:220px;padding:10px">
+  <button type="submit" style="padding:10px 18px">Track order</button>
+</form>`;
     $('#webhook-url').textContent = boot.webhookUrl;
     $('#server-ip').textContent = boot.serverIp || 'ask your app provider';
     showConnection(boot.settings);
@@ -835,6 +853,15 @@
       toast(err.message, true);
     } finally {
       btn.disabled = false;
+    }
+  });
+  $('#copy-snippet').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText($('#track-snippet').value);
+      toast('Code copied');
+    } catch {
+      $('#track-snippet').select();
+      toast('Press Ctrl+C to copy', true);
     }
   });
   $('#copy-webhook').addEventListener('click', async () => {

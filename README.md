@@ -72,6 +72,25 @@ next time.
 - **India Post booking details:** contract ids, handover (drop-off or pickup) and post office id. These are
   used in the Excel upload sheet.
 
+### Customer tracking page on your store
+
+Customers can track their parcel at **`https://<your-store>/apps/track`**. The page opens inside your store's
+theme, using its header, footer and fonts. One search box accepts:
+
+| Customer enters | They see |
+| --- | --- |
+| India Post tracking number (`EB123456785IN`) | Status and full India Post history |
+| Order number (`#1001` or `1001`) | That order's shipment. If it hasn't shipped yet: *"Order #1001 is confirmed…"* |
+| Mobile number (`9876501234`, `+91 …`, `0…`) | All shipments sent to that number, newest first (up to 10) |
+
+- **Live status:** with India Post tracking set up, each search fetches the latest status. Data older than 5
+  minutes is refreshed.
+- **Privacy:** customer names and addresses are never shown on this page. Settings → **Customer tracking page**
+  can also require the **mobile number together with the order number**, so nobody can look up orders by
+  guessing order numbers. Searches are limited to 30 a minute per visitor.
+- **Adding it to your store:** add a menu link to `/apps/track` (Online Store → Navigation), or paste the
+  ready-made search box from Settings into any page.
+
 ### Tracking updates from India Post
 
 With the India Post API username and password saved in Settings:

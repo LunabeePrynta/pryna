@@ -204,6 +204,16 @@ function createStore(db) {
     findShipmentsByBarcode(barcode) {
       return db.prepare('SELECT * FROM shipments WHERE barcode = ?').all(barcode).map(hydrateShipment);
     },
+    /** Most recent shipments sent to a (normalised) mobile number. */
+    findShipmentsByMobile(shop, mobile, limit = 10) {
+      return db
+        .prepare(
+          `SELECT * FROM shipments WHERE shop = ? AND booked_at IS NOT NULL
+             AND json_extract(article, '$.receiver_mobile_no') = ? ORDER BY booked_at DESC, id DESC LIMIT ?`,
+        )
+        .all(shop, mobile, limit)
+        .map(hydrateShipment);
+    },
     getShipmentByOrderName(shop, orderName) {
       return hydrateShipment(db.prepare('SELECT * FROM shipments WHERE shop = ? AND order_name = ?').get(shop, orderName));
     },

@@ -424,3 +424,59 @@ test('India Post connection: per-store webhook link, connection test and on/off 
   assert.equal((await call('/api/shipments/refresh', { method: 'POST', body: {} })).status, 400);
   assert.equal(calls.tracking.length, before);
 });
+
+test('storefront tracking page: search by tracking number, order number or mobile number', async (t) => {
+  const { ctx, server, base, call, calls, tracking } = await setup();
+  t.after(() => server.close());
+  await call('/api/settings', { method: 'PUT', body: { settings: { ...SETTINGS, indiaPost: { ...SETTINGS.indiaPost, username: 'u', password: 'p' } } } });
+  // #1001 and #1003 go to the same mobile (sampleOrder uses 09876501234); #1002 stays unshipped.
+  await call('/api/order/save', { method: 'POST', body: { orderId: 'gid://shopify/Order/1001', trackingNumber: AWB1, bookingDate: '2026-09-25' } });
+  await call('/api/order/save', { method: 'POST', body: { orderId: 'gid://shopify/Order/1003', trackingNumber: AWB2, bookingDate: '2026-09-26' } });
+  tracking.events = [];
+
+  const page = async (params) => {
+    const res = await fetch(`${base}/track?${new URLSearchParams({ shop: SHOP, ...params })}`);
+    assert.equal(res.status, 200);
+    const html = await res.text();
+    return html.slice(html.indexOf('</form>')); // results only (the search box has an example number)
+  };
+
+  // Order number, with or without '#'.
+  for (const q of ['#1001', '1001']) {
+    const html = await page({ q });
+    assert.match(html, new RegExp(AWB1));
+    assert.doesNotMatch(html, new RegExp(AWB2));
+  }
+
+  // Mobile number (any common format) lists every shipment for it, newest first.
+  const byMobile = await page({ q: '+91 98765 01234' });
+  assert.match(byMobile, /2 shipments found/);
+  assert.ok(byMobile.indexOf(AWB2) < byMobile.indexOf(AWB1));
+  assert.doesNotMatch(byMobile, /Asha Kumar/, 'no customer names on the public page');
+  assert.match(await page({ q: '9000000000' }), /No shipped orders found for this mobile number/);
+
+  // An order without a tracking number yet.
+  assert.match(await page({ q: '#1002' }), /Order #1002 is confirmed/);
+  assert.match(await page({ q: '#9999' }), /find order #9999/);
+
+  // Tracking number still works, and old ?awb= links too.
+  assert.match(await page({ awb: AWB2 }), new RegExp(AWB2));
+
+  // Live data is fetched for stale shipments when India Post tracking is configured.
+  const before = calls.tracking.length;
+  ctx.db.updateShipment(ctx.db.getShipmentByBarcode(SHOP, AWB1).id, { last_polled_at: '2020-01-01T00:00:00Z' });
+  await page({ q: '#1001' });
+  assert.equal(calls.tracking.length, before + 1);
+
+  // Privacy option: order number needs the matching mobile number.
+  await call('/api/settings', { method: 'PUT', body: { settings: { trackingPage: { requireMobileForOrder: true } } } });
+  const ask = await page({ q: '#1001' });
+  assert.match(ask, /also enter the mobile number/);
+  const form = await (await fetch(`${base}/track?${new URLSearchParams({ shop: SHOP, q: '#1001' })}`)).text();
+  assert.match(form, /name="mobile"/);
+  assert.doesNotMatch(ask, new RegExp(AWB1));
+  assert.doesNotMatch(await page({ q: '#1001', mobile: '9000000000' }), new RegExp(AWB1));
+  assert.match(await page({ q: '#1001', mobile: '9876501234' }), new RegExp(AWB1));
+  assert.match(await page({ q: '#1002', mobile: '09876501234' }), /Order #1002 is confirmed/);
+  assert.doesNotMatch(await page({ q: '#1002', mobile: '9000000000' }), /is confirmed/);
+});

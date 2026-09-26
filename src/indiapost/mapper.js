@@ -74,6 +74,8 @@ export function defaultSettings() {
     cod: { enabled: true },
     insurance: { enabled: false, minOrderValue: 5000 },
     automation: { notifyCustomer: true },
+    // Storefront tracking page: ask for the mobile number together with an order number.
+    trackingPage: { requireMobileForOrder: false },
   };
 }
 

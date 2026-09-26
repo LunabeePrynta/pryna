@@ -17,7 +17,7 @@ import {
 import { createContext } from './services/context.js';
 import { ShipmentError, orderDraft, saveShipment } from './services/shipments.js';
 import { exportShipments } from './services/export.js';
-import { handleIndiaPostEvent, lookupTracking, pollAllShops, refreshShipments } from './services/tracking.js';
+import { handleIndiaPostEvent, pollAllShops, refreshShipments, searchTracking } from './services/tracking.js';
 import { renderStandalonePage, renderTrackingContent } from './views/track.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -318,25 +318,32 @@ export function createApp(ctx) {
   // ---------- Public tracking (storefront app proxy + standalone) ----------
   const trackLimiter = rateLimiter({ windowMs: 60_000, max: 30 });
 
+  // `q` = tracking number, order number or mobile; `awb` is the older parameter used in tracking links.
+  const trackingPage = async (shop, req) => {
+    const query = String(req.query.q ?? req.query.awb ?? '').slice(0, 30);
+    const mobile = String(req.query.mobile ?? '').slice(0, 14);
+    const outcome = query ? await searchTracking(ctx, shop, { q: query, mobile }) : null;
+    const requireMobile = Boolean(ctx.getSettings(shop).trackingPage?.requireMobileForOrder);
+    return { query, mobile, outcome, requireMobile };
+  };
+
   app.get(['/proxy', '/proxy/*path'], trackLimiter, asyncRoute(async (req, res) => {
     if (!verifyAppProxySignature(req.query, shopify.apiSecret)) return res.status(401).send('Invalid signature');
     const shop = String(req.query.shop ?? '');
     if (!db.getShop(shop)) return res.status(404).send('Store not found');
-    const query = String(req.query.awb ?? '').slice(0, 20);
-    const result = query ? await lookupTracking(ctx, shop, query) : null;
+    const page = await trackingPage(shop, req);
     res
       .type('application/liquid')
       .set('Cache-Control', 'no-store')
-      .send(renderTrackingContent({ query, result, formAction: shopify.proxyPath }));
+      .send(renderTrackingContent({ ...page, formAction: shopify.proxyPath }));
   }));
 
   app.get('/track', trackLimiter, asyncRoute(async (req, res) => {
     const shop = String(req.query.shop ?? '');
     if (!isValidShopDomain(shop) || !db.getShop(shop)) return res.status(404).send('Store not found');
-    const query = String(req.query.awb ?? '').slice(0, 20);
-    const result = query ? await lookupTracking(ctx, shop, query) : null;
+    const page = await trackingPage(shop, req);
     res.type('html').send(
-      renderStandalonePage(renderTrackingContent({ query, result, formAction: '/track', hiddenFields: { shop }, standalone: true })),
+      renderStandalonePage(renderTrackingContent({ ...page, formAction: '/track', hiddenFields: { shop }, standalone: true })),
     );
   }));
 

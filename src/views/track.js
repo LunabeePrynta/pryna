@@ -54,50 +54,76 @@ const STYLES = `
   .ipt li strong { display:block; }
   .ipt li small { color:var(--ipt-muted); }
   .ipt-error { padding:14px 16px; border-radius:8px; background:#fee9e8; color:#8e0b21; }
+  .ipt-note { padding:14px 16px; border-radius:8px; background:#e0f0ff; color:#00316a; }
+  .ipt input.ipt-mobile { flex:1 1 180px; text-transform:none; letter-spacing:0; }
+  .ipt-results { display:flex; flex-direction:column; gap:16px; }
+  .ipt-count { margin:0 0 12px; color:var(--ipt-muted); }
 </style>`;
 
-export function renderTrackingContent({ query = '', result = null, formAction, hiddenFields = {}, standalone = false }) {
+function renderCard(result) {
+  const tone = STATUS_TONE[result.status] ?? 'neutral';
+  const meta = [
+    result.orderName && ['Order', result.orderName],
+    result.booking?.bookedAt && ['Booked at', result.booking.bookedAt],
+    result.booking?.bookedOn && ['Booked on', formatIst(result.booking.bookedOn)],
+    result.booking?.origin && ['From pincode', result.booking.origin],
+    result.booking?.destination && ['To pincode', result.booking.destination],
+    result.booking?.deliveryOffice && ['Delivery office', result.booking.deliveryOffice],
+  ].filter(Boolean);
+  const events = result.events.length
+    ? `<ol>${result.events
+        .map(
+          (e) => `<li><strong>${esc(e.description)}</strong>
+            <small>${esc(formatIst(e.happenedAt))}${e.office ? ` · ${esc(e.office)}` : ''}${e.remarks ? ` · ${esc(e.remarks)}` : ''}</small></li>`,
+        )
+        .join('')}</ol>`
+    : `<p class="ipt-sub">Your parcel has been handed to India Post. Detailed updates appear once it is scanned at the post office.
+        You can also track it on the <a href="https://www.indiapost.gov.in" target="_blank" rel="noopener">India Post website</a>.</p>`;
+  return `<div class="ipt-card">
+    <div class="ipt-head"><div><span class="ipt-sub">India Post tracking number</span><div class="ipt-awb">${esc(result.awb)}</div></div>
+    <span class="ipt-badge ${tone}">${esc(result.statusLabel)}</span></div>
+    ${meta.length ? `<div class="ipt-meta">${meta.map(([k, v]) => `<div><span>${esc(k)}</span>${esc(v)}</div>`).join('')}</div>` : ''}
+    ${events}
+  </div>`;
+}
+
+/**
+ * Tracking page body.
+ * `outcome` is the result of searchTracking(): { results } | { pending } | { error, needMobile } | null.
+ */
+export function renderTrackingContent({
+  query = '',
+  mobile = '',
+  outcome = null,
+  requireMobile = false,
+  formAction,
+  hiddenFields = {},
+  standalone = false,
+}) {
   const hidden = Object.entries(hiddenFields)
     .map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`)
     .join('');
+  const askMobile = requireMobile || outcome?.needMobile;
 
   let body = '';
-  if (result?.error) {
-    body = `<div class="ipt-error" role="alert">${esc(result.error)}</div>`;
-  } else if (result) {
-    const tone = STATUS_TONE[result.status] ?? 'neutral';
-    const meta = [
-      result.orderName && ['Order', result.orderName],
-      result.booking?.bookedAt && ['Booked at', result.booking.bookedAt],
-      result.booking?.bookedOn && ['Booked on', formatIst(result.booking.bookedOn)],
-      result.booking?.origin && ['From pincode', result.booking.origin],
-      result.booking?.destination && ['To pincode', result.booking.destination],
-      result.booking?.deliveryOffice && ['Delivery office', result.booking.deliveryOffice],
-    ].filter(Boolean);
-    const events = result.events.length
-      ? `<ol>${result.events
-          .map(
-            (e) => `<li><strong>${esc(e.description)}</strong>
-              <small>${esc(formatIst(e.happenedAt))}${e.office ? ` · ${esc(e.office)}` : ''}${e.remarks ? ` · ${esc(e.remarks)}` : ''}</small></li>`,
-          )
-          .join('')}</ol>`
-      : `<p class="ipt-sub">Your shipment has been handed to India Post. Detailed updates appear once the article is scanned at the post office.
-          You can also track it on the <a href="https://www.indiapost.gov.in" target="_blank" rel="noopener">India Post website</a>.</p>`;
-    body = `<div class="ipt-card">
-      <div class="ipt-head"><div><span class="ipt-sub">India Post article</span><div class="ipt-awb">${esc(result.awb)}</div></div>
-      <span class="ipt-badge ${tone}">${esc(result.statusLabel)}</span></div>
-      ${meta.length ? `<div class="ipt-meta">${meta.map(([k, v]) => `<div><span>${esc(k)}</span>${esc(v)}</div>`).join('')}</div>` : ''}
-      ${events}
-    </div>`;
+  if (outcome?.error) {
+    body = `<div class="ipt-error" role="alert">${esc(outcome.error)}</div>`;
+  } else if (outcome?.pending) {
+    body = `<div class="ipt-note" role="status"><strong>Order ${esc(outcome.pending.orderName)} is confirmed.</strong>
+      It hasn't been handed to India Post yet. You'll get the tracking number by email as soon as it ships.</div>`;
+  } else if (outcome?.results?.length) {
+    const count = outcome.results.length > 1 ? `<p class="ipt-count">${outcome.results.length} shipments found</p>` : '';
+    body = `${count}<div class="ipt-results">${outcome.results.map(renderCard).join('')}</div>`;
   }
 
   return `${STYLES}
 <div class="ipt${standalone ? ' ipt--standalone' : ''}">
   <h1>Track your order</h1>
-  <p class="ipt-sub">Enter the India Post article number from your shipping confirmation.</p>
+  <p class="ipt-sub">Enter your India Post tracking number, order number or mobile number.</p>
   <form method="get" action="${esc(formAction)}">
     ${hidden}
-    <input type="text" name="awb" value="${esc(query)}" placeholder="e.g. EB123456785IN" maxlength="20" autocomplete="off" aria-label="Article number" required>
+    <input type="text" name="q" value="${esc(query)}" placeholder="EB123456785IN, #1001 or mobile number" maxlength="30" autocomplete="off" aria-label="Tracking number, order number or mobile number" required>
+    ${askMobile ? `<input type="text" class="ipt-mobile" name="mobile" value="${esc(mobile)}" placeholder="Mobile number (for order number)" inputmode="tel" maxlength="14" autocomplete="tel" aria-label="Mobile number used for the order">` : ''}
     <button type="submit">Track</button>
   </form>
   ${body}
