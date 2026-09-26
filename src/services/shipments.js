@@ -4,7 +4,7 @@
 
 import { isValidBarcode, normalizeBarcode } from '../indiapost/barcode.js';
 import { buildArticle, sanitizeOverrides } from '../indiapost/mapper.js';
-import { syncShopifyMetafields } from './tracking.js';
+import { refreshShipments, syncShopifyMetafields } from './tracking.js';
 
 export class ShipmentError extends Error {}
 
@@ -153,5 +153,14 @@ export async function saveShipment(ctx, shop, orderId, { trackingNumber, booking
   }
 
   db.updateShipment(shipment.id, { errors: warnings });
+
+  // With India Post tracking configured, fetch the article's status straight away.
+  if (ctx.hasTracking(shop, settings)) {
+    try {
+      await refreshShipments(ctx, shop, [db.getShipment(shop, shipment.id)]);
+    } catch (err) {
+      ctx.logger.error(`[shipments] tracking ${shop} ${number}: ${err.message}`);
+    }
+  }
   return { shipment: db.getShipment(shop, shipment.id), warnings };
 }

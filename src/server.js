@@ -139,6 +139,7 @@ export function createApp(ctx) {
       products: PRODUCTS,
       statusLabels: STATUS_LABELS,
       trackingEnabled: ctx.hasTracking(req.shop),
+      defaultIndiaPostUrl: ctx.config.indiaPost.baseUrl,
       webhookUrl: `${ctx.config.appUrl}/webhooks/indiapost`,
       trackingPageUrl: `https://${req.shop}${shopify.proxyPath}`,
     });
@@ -248,8 +249,12 @@ export function createApp(ctx) {
     res.json({ shipment: publicShipment(shipment), events: db.listEvents(shipment.id) });
   });
 
+  // Fetch the latest India Post tracking now: the given shipments, or every one not yet delivered.
   api.post('/shipments/refresh', asyncRoute(async (req, res) => {
-    const ids = (req.body?.shipmentIds ?? []).map(Number).filter(Boolean);
+    if (!ctx.hasTracking(req.shop)) {
+      throw new ShipmentError('Add your India Post API username and password in Settings to fetch tracking.');
+    }
+    const ids = (req.body?.shipmentIds ?? []).map(Number).filter(Boolean).slice(0, 2000);
     const shipments = ids.length ? db.listShipmentsByIds(req.shop, ids).filter((s) => s.booked_at) : db.listActiveShipments(req.shop);
     const stored = await refreshShipments(ctx, req.shop, shipments);
     res.json({ checked: shipments.length, newEvents: stored });
@@ -259,6 +264,12 @@ export function createApp(ctx) {
 
   api.put('/settings', (req, res) => {
     const input = req.body?.settings ?? {};
+    // The India Post login is sent to this server, so only India Post (CEPT) HTTPS hosts are accepted.
+    const baseUrl = String(input.indiaPost?.baseUrl ?? '').trim().replace(/\/+$/, '');
+    if (baseUrl && !isIndiaPostUrl(baseUrl)) {
+      return res.status(400).json({ error: 'India Post API server must be an https://… address on cept.gov.in or indiapost.gov.in' });
+    }
+    if (input.indiaPost) input.indiaPost.baseUrl = baseUrl;
     res.json({ settings: ctx.saveSettings(req.shop, input) });
   });
 
@@ -317,6 +328,15 @@ export function createApp(ctx) {
 
 const ALLOWED_EXTENSION_ORIGINS = [/^https:\/\/extensions\.shopifycdn\.com$/, /^https:\/\/admin\.shopify\.com$/, /^https:\/\/[a-z0-9-]+\.myshopify\.com$/];
 
+export function isIndiaPostUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && /(^|\.)(cept|indiapost)\.gov\.in$/.test(url.hostname) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 /** Accepts gids, numeric ids, comma separated strings or arrays (ids[]=…) → order gids. */
 export function parseOrderIds(value) {
   const list = (Array.isArray(value) ? value : String(value ?? '').split(','))
@@ -339,6 +359,7 @@ function publicShipment(s) {
     warnings: s.errors,
     bookedAt: s.booked_at,
     exportedAt: s.exported_at,
+    lastCheckedAt: s.last_polled_at,
     receiver: s.article
       ? { name: s.article.receiver_name, city: s.article.receiver_city, pincode: s.article.receiver_pincode }
       : null,

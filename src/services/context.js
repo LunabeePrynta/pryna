@@ -44,10 +44,11 @@ export function createContext({ db, config, fetchImpl = fetch, logger = console 
 
     indiaPostFor(shop, settings = ctx.getSettings(shop)) {
       const { username, password } = settings.indiaPost;
-      const cacheKey = `${username}:${password}`;
+      const baseUrl = settings.indiaPost.baseUrl || config.indiaPost.baseUrl;
+      const cacheKey = `${baseUrl}:${username}:${password}`;
       const cached = clients.get(shop);
       if (cached && cached.key === cacheKey) return cached.client;
-      const client = new IndiaPostClient({ baseUrl: config.indiaPost.baseUrl, username, password, fetchImpl });
+      const client = new IndiaPostClient({ baseUrl, username, password, fetchImpl });
       clients.set(shop, { key: cacheKey, client });
       return client;
     },

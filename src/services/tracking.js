@@ -105,15 +105,23 @@ export async function refreshShipments(ctx, shop, shipments) {
   let stored = 0;
   const barcodes = [...byBarcode.keys()];
   for (let i = 0; i < barcodes.length; i += TRACKING_CHUNK) {
-    const items = await client.trackBulk(barcodes.slice(i, i + TRACKING_CHUNK));
+    const chunk = barcodes.slice(i, i + TRACKING_CHUNK);
+    const items = await client.trackBulk(chunk);
+    const seen = new Set();
     for (const item of items) {
       const result = normalizeTrackingResult(item);
       const shipment = byBarcode.get(result.barcode);
       if (!shipment) continue;
+      seen.add(result.barcode);
       stored += await applyEvents(ctx, shop, ctx.db.getShipment(shop, shipment.id), result.events, {
         delivered: result.delivered,
         polled: true,
       });
+    }
+    // Articles India Post has no data for yet (not scanned) still count as checked.
+    const checkedAt = new Date().toISOString();
+    for (const barcode of chunk) {
+      if (!seen.has(barcode)) ctx.db.updateShipment(byBarcode.get(barcode).id, { last_polled_at: checkedAt });
     }
   }
   return stored;

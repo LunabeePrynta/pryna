@@ -60,11 +60,32 @@ next time.
   whether to email the customer.
 - **Sender address:** used in the Excel upload sheet.
 - **India Post account (optional):**
+  - **API server:** leave empty for India Post's test server, or enter the production address India Post gave
+    you. Only `https://…cept.gov.in` / `…indiapost.gov.in` addresses are accepted, because your login is sent
+    there.
   - Customer and contract ids and post office id fill the upload sheet.
   - The API username and password turn on **live tracking**. With them, the app checks India Post every 30
     minutes and also accepts India Post's webhook. It sends each status (in transit, out for delivery,
     delivered) to the Shopify order. The customer's tracking link then opens your store's own page,
     `https://<store>/apps/track`. Without them, Shopify's standard India Post tracking link is used.
+
+### Tracking updates from India Post
+
+With the India Post API username and password saved in Settings:
+
+- **When you save a tracking number,** the app asks India Post for that article's status straight away.
+- **Every 30 minutes,** the app checks all orders not yet delivered or returned, in batches of up to 500.
+  India Post can also push updates to the app's webhook.
+- **Update tracking from India Post** on the Created orders tab checks the ticked orders now, or all
+  undelivered orders if none are ticked. **Update tracking** in an order's window checks just that order.
+- **Every new status is sent to the Shopify order:**
+  - picked up / booked, in transit, out for delivery, delivered, or returned
+  - it appears on the order timeline and the customer's order status page, and Shopify can email the customer
+  - the order's `indiapost.tracking` metafield is updated
+- **Each order's window** shows the full India Post tracking history and when it was last checked.
+
+India Post's tracking API only returns articles booked under your own India Post customer id. The India Post
+server must also allow your server's IP address (`139.59.25.155`).
 
 ## Project layout
 

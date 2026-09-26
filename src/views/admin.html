@@ -80,6 +80,12 @@
   .awb-big { font-size:22px; font-weight:700; letter-spacing:.05em; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
   .kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:12px 0; }
   .kv > div > span:first-child { display:block; color:var(--muted); font-size:12px; }
+  .timeline { list-style:none; margin:8px 0 0; padding:0; }
+  .timeline li { position:relative; padding:0 0 14px 22px; }
+  .timeline li::before { content:""; position:absolute; left:4px; top:6px; width:9px; height:9px; border-radius:50%; background:#c9c9c9; }
+  .timeline li::after { content:""; position:absolute; left:8px; top:17px; bottom:0; width:1px; background:var(--line); }
+  .timeline li:first-child::before { background:#005bd3; }
+  .timeline li:last-child::after { display:none; }
   .dims { display:flex; gap:6px; align-items:center; }
   .dims input { width:100%; }
 </style>
@@ -131,6 +137,7 @@
         <span class="spacer"></span>
         <span id="exp-count" class="muted"></span>
         <button class="btn" id="exp-clear" hidden>Clear ticks</button>
+        <button class="btn" id="refresh-tracking" hidden>Update tracking from India Post</button>
         <button class="btn primary" id="download-excel">Download Excel</button>
       </div>
       <p class="muted small" style="margin:-4px 0 10px">Tick the orders you want in the Excel file, or leave all unticked to download every order in the dates above.</p>
@@ -187,6 +194,7 @@
           <label class="field">Business Parcel contract id<input name="indiaPost.contracts.BUSINESS_PARCEL" inputmode="numeric"></label>
           <label class="field">Handover<select name="mode"><option value="DROPOFF">Drop-off at post office</option><option value="PICKUP">Pickup from my address</option></select></label>
           <label class="field">Post office id<small>8 digits</small><input name="officeId" inputmode="numeric"></label>
+          <label class="field span2">API server<small>Leave empty for India Post's test server. Enter the production address India Post gave you.</small><input name="indiaPost.baseUrl" id="ip-base-url" placeholder="https://test.cept.gov.in/beextcustomer" autocomplete="off"></label>
           <label class="field">API username<small>For live tracking</small><input name="indiaPost.username" autocomplete="off"></label>
           <label class="field">API password<input name="indiaPost.password" type="password" autocomplete="new-password"></label>
         </div>
@@ -218,7 +226,15 @@
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const toast = (msg, isError = false) => (window.shopify?.toast ? shopify.toast.show(msg, { isError }) : alert(msg));
-  const state = { statusLabels: {}, products: {}, settings: null, orders: [], shipments: [], focusIds: [], ticked: new Set() };
+  const state = { statusLabels: {}, products: {}, settings: null, trackingEnabled: false, orders: [], shipments: [], focusIds: [], ticked: new Set() };
+  const ago = (iso) => {
+    if (!iso) return '';
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins} min ago`;
+    const hours = Math.round(mins / 60);
+    return hours < 24 ? `${hours} h ago` : fmtDay(iso);
+  };
 
   async function api(path, { method = 'GET', body, raw = false } = {}) {
     const res = await fetch(`/api${path}`, {
@@ -530,14 +546,40 @@
         <div><span>Shopify</span>${s.fulfilled ? 'Fulfilled' : 'Not fulfilled'}</div>
         <div><span>Excel</span>${s.exportedAt ? `Downloaded ${esc(fmtDay(s.exportedAt))}` : 'Not downloaded yet'}</div>
       </div>
-      ${s.lastEvent ? `<p><strong>Latest:</strong> ${esc(s.lastEvent)} <span class="muted">${esc(fmtDate(s.lastEventAt))}</span></p>` : ''}`;
+      <div class="section"><h3>Tracking history</h3><div id="ship-events" class="muted">${state.trackingEnabled ? 'Loading…' : 'Add your India Post API username and password in Settings to fetch tracking updates.'}</div></div>`;
     $('#ship-foot').innerHTML = `
+      ${state.trackingEnabled ? `<button type="button" class="btn" id="ship-refresh" data-id="${s.id}">Update tracking</button>` : ''}
       <button type="button" class="btn" id="ship-edit">Edit</button>
       <button type="button" class="btn primary" data-close>Done</button>`;
+    if (state.trackingEnabled) loadEvents(s.id);
   }
 
-  $('#ship-foot').addEventListener('click', (e) => {
-    if (e.target.closest('#ship-edit')) renderForm();
+  async function loadEvents(shipmentId) {
+    const box = $('#ship-events');
+    try {
+      const { shipment, events } = await api(`/shipments/${shipmentId}`);
+      if (!box.isConnected) return;
+      const checked = shipment.lastCheckedAt ? `<p class="muted small">Last checked with India Post ${esc(ago(shipment.lastCheckedAt))}.</p>` : '';
+      box.classList.toggle('muted', !events.length);
+      box.innerHTML = events.length
+        ? `<ol class="timeline">${events.map((e) => `<li><strong>${esc(e.description)}</strong>
+            <div class="muted small">${esc(fmtDate(e.happened_at))}${e.office ? ` · ${esc(e.office)}` : ''}${e.remarks ? ` · ${esc(e.remarks)}` : ''}</div></li>`).join('')}</ol>${checked}`
+        : `No updates from India Post yet — they appear once the parcel is scanned at the post office.${checked}`;
+      const badgeCell = $('#ship-body .kv .badge');
+      if (badgeCell) badgeCell.outerHTML = badge(shipment.status);
+    } catch (err) {
+      box.textContent = err.message;
+    }
+  }
+
+  $('#ship-foot').addEventListener('click', async (e) => {
+    if (e.target.closest('#ship-edit')) return renderForm();
+    const refresh = e.target.closest('#ship-refresh');
+    if (refresh) {
+      await refreshTracking([Number(refresh.dataset.id)], refresh);
+      loadEvents(Number(refresh.dataset.id));
+      loadOrders();
+    }
   });
   dialog.addEventListener('click', (e) => {
     if (e.target.closest('[data-close]') || e.target === dialog) dialog.close();
@@ -567,9 +609,9 @@
           <td><strong>${esc(s.orderName)}</strong></td>
           <td><code>${esc(s.barcode)}</code></td>
           <td class="wrap">${esc(s.receiver?.name || '')}<div class="muted">${esc(s.receiver?.city || '')}${s.receiver?.pincode ? ` · ${esc(s.receiver.pincode)}` : ''}</div></td>
-          <td>${badge(s.status)}${s.lastEvent ? `<div class="muted small">${esc(s.lastEvent)}</div>` : ''}</td>
+          <td class="wrap">${badge(s.status)}${s.lastEvent ? `<div class="muted small">${esc(s.lastEvent)}</div>` : ''}${state.trackingEnabled && s.lastCheckedAt ? `<div class="muted small">Checked ${esc(ago(s.lastCheckedAt))}</div>` : ''}</td>
           <td>${s.exportedAt ? esc(fmtDay(s.exportedAt)) : '<span class="muted">—</span>'}</td>
-          <td class="actions"><button class="btn" data-open="${esc(s.orderId)}">Edit</button></td>
+          <td class="actions"><button class="btn" data-open="${esc(s.orderId)}">View</button></td>
         </tr>`).join('')
       : '<tr><td colspan="8" class="muted">No created orders for these dates.</td></tr>';
     updateExportButton();
@@ -591,6 +633,9 @@
       ? `${ticked.length} of ${rows.length} ticked`
       : `${rows.length} order${rows.length === 1 ? '' : 's'}`;
     $('#exp-clear').hidden = ticked.length === 0;
+    const refresh = $('#refresh-tracking');
+    refresh.hidden = !state.trackingEnabled;
+    refresh.textContent = ticked.length ? `Update tracking (${ticked.length} ticked)` : 'Update tracking from India Post';
     const all = $('#exp-all');
     all.checked = rows.length > 0 && ticked.length === rows.length;
     all.indeterminate = ticked.length > 0 && ticked.length < rows.length;
@@ -625,6 +670,25 @@
     if (open) openOrder(open.dataset.open);
   });
   dialog.addEventListener('close', () => { if (!$('#tab-created').hidden) loadCreated(); });
+
+  async function refreshTracking(shipmentIds, button) {
+    const label = button.textContent;
+    button.disabled = true; button.textContent = 'Checking India Post…';
+    try {
+      const r = await api('/shipments/refresh', { method: 'POST', body: { shipmentIds } });
+      toast(r.checked ? `Checked ${r.checked} order(s) · ${r.newEvents} new update(s)` : 'All orders are already delivered');
+      return r;
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      button.disabled = false; button.textContent = label;
+    }
+  }
+
+  $('#refresh-tracking').addEventListener('click', async (e) => {
+    await refreshTracking(tickedVisible(), e.currentTarget);
+    loadCreated();
+  });
 
   $('#download-excel').addEventListener('click', async (e) => {
     const btn = e.currentTarget;
@@ -690,7 +754,9 @@
       const { settings } = await api('/settings', { method: 'PUT', body: { settings: readSettings() } });
       fillSettings(settings);
       state.settings = settings;
-      showTrackingInfo(await api('/bootstrap'));
+      const boot = await api('/bootstrap');
+      state.trackingEnabled = boot.trackingEnabled;
+      showTrackingInfo(boot);
       toast('Settings saved');
     } catch (err) {
       toast(err.message, true);
@@ -714,6 +780,8 @@
       state.statusLabels = boot.statusLabels;
       state.products = boot.products;
       state.settings = boot.settings;
+      state.trackingEnabled = boot.trackingEnabled;
+      if (boot.defaultIndiaPostUrl) $('#ip-base-url').placeholder = boot.defaultIndiaPostUrl;
       $('#product-select').innerHTML = Object.entries(boot.products).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join('');
       fillSettings(boot.settings);
       showTrackingInfo(boot);

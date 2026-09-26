@@ -40,6 +40,14 @@ function orderNode(order) {
 
 function createFakes() {
   const calls = { graphql: [], tracking: [] };
+  // What the fake India Post tracking API returns for every article (newest first). Tests can change it.
+  const tracking = {
+    events: [
+      { date: '2026-09-26T09:00:00Z', time: '09:00:00', office: 'Indiranagar SO', officeid: '21560001', event: 'Taken out for delivery', remarks: '', rts: false },
+      { date: '2026-09-25T18:00:00Z', time: '18:00:00', office: 'Chennai GPO', officeid: '29360001', event: 'Item Booked', remarks: '', rts: false },
+    ],
+    delivered: false,
+  };
   const orders = new Map(
     [
       sampleOrder(),
@@ -82,17 +90,14 @@ function createFakes() {
         success: true,
         data: body.bulk.map((awb) => ({
           booking_details: { article_number: awb, booked_at: 'Chennai GPO', origin_pincode: '600001', destination_pincode: '560038' },
-          tracking_details: [
-            { date: '2026-09-26T09:00:00Z', time: '09:00:00', office: 'Indiranagar SO', officeid: '21560001', event: 'Taken out for delivery', remarks: '', rts: false },
-            { date: '2026-09-25T18:00:00Z', time: '18:00:00', office: 'Chennai GPO', officeid: '29360001', event: 'Item Booked', remarks: '', rts: false },
-          ],
-          del_status: { del_status: 'not delivered' },
+          tracking_details: tracking.events,
+          del_status: { del_status: tracking.delivered ? 'delivered' : 'not delivered' },
         })),
       });
     }
     throw new Error(`Unexpected request ${url}`);
   };
-  return { fetchImpl, calls, orders };
+  return { fetchImpl, calls, orders, tracking };
 }
 
 async function setup() {
@@ -269,16 +274,23 @@ test('quick save several orders, then download the Excel sheet', async (t) => {
   assert.equal((await call('/api/export?from=2026-09-27')).headers.get('x-row-count'), '0');
 });
 
-test('with India Post tracking configured: tracking link, storefront page and webhook updates', async (t) => {
-  const { ctx, server, base, call, callJson, calls } = await setup();
+test('with India Post tracking configured: fetch on save, update tracking, webhook, storefront page', async (t) => {
+  const { ctx, server, base, call, callJson, calls, tracking } = await setup();
   t.after(() => server.close());
   await call('/api/settings', { method: 'PUT', body: { settings: { ...SETTINGS, indiaPost: { ...SETTINGS.indiaPost, username: 'u', password: 'p' } } } });
   assert.equal((await callJson('/api/bootstrap')).trackingEnabled, true);
+  const pushed = () => calls.graphql.filter((g) => /CreateFulfillmentEvent/.test(g.query)).map((g) => g.variables.event.status);
 
+  // Saving checks India Post straight away; nothing scanned yet.
+  tracking.events = [];
   const { shipment } = await callJson('/api/order/save', { method: 'POST', body: { orderId: 'gid://shopify/Order/1001', trackingNumber: AWB3 } });
   assert.equal(fulfilCalls(calls)[0].trackingInfo.url, `https://${SHOP}/apps/track?awb=${AWB3}`);
+  assert.deepEqual(calls.tracking.at(-1), { bulk: [AWB3] });
+  assert.equal(shipment.status, 'BOOKED');
+  assert.ok(shipment.lastCheckedAt, 'marked as checked even without events');
+  assert.deepEqual(pushed(), []);
 
-  // India Post webhook: wrong secret rejected, valid event updates Shopify.
+  // India Post webhook: wrong secret rejected, valid event updates the order.
   const event = {
     article_number: AWB3,
     event_code: 'BAG_DISPATCH',
@@ -292,10 +304,35 @@ test('with India Post tracking configured: tracking link, storefront page and we
   assert.equal((await post('?secret=nope')).status, 401);
   assert.deepEqual(await (await post('?secret=hook-secret')).json(), { success: true, received: 1, stored: 1 });
   assert.equal(ctx.db.getShipment(SHOP, shipment.id).status, 'IN_TRANSIT');
-  const pushed = () => calls.graphql.filter((g) => /CreateFulfillmentEvent/.test(g.query)).map((g) => g.variables.event.status);
   assert.deepEqual(pushed(), ['IN_TRANSIT']);
 
-  // Storefront tracking page (app proxy) — signature required, then live lookup.
+  // "Update tracking" pulls the latest events; the older "Item Booked" is stored but not re-announced.
+  tracking.events = [
+    { date: '2026-09-26T09:00:00Z', time: '09:00:00', office: 'Indiranagar SO', officeid: '21560001', event: 'Taken out for delivery', remarks: '', rts: false },
+    { date: '2026-09-25T18:00:00Z', time: '18:00:00', office: 'Chennai GPO', officeid: '29360001', event: 'Item Booked', remarks: '', rts: false },
+  ];
+  const refreshed = await callJson('/api/shipments/refresh', { method: 'POST', body: {} });
+  assert.deepEqual(refreshed, { checked: 1, newEvents: 2 });
+  assert.deepEqual(pushed(), ['IN_TRANSIT', 'OUT_FOR_DELIVERY']);
+  const detail = await callJson(`/api/shipments/${shipment.id}`);
+  assert.equal(detail.shipment.status, 'OUT_FOR_DELIVERY');
+  assert.equal(detail.shipment.lastEvent, 'Taken out for delivery — Indiranagar SO');
+  assert.deepEqual(detail.events.map((e) => e.description), ['Taken out for delivery', 'Bag Dispatch', 'Item Booked']);
+  const metafield = calls.graphql.findLast((g) => /SetMetafields/.test(g.query)).variables.metafields[0];
+  assert.equal(JSON.parse(metafield.value).status, 'OUT_FOR_DELIVERY');
+
+  // Delivered: Shopify is told, and the order drops out of the automatic checks.
+  tracking.events = [
+    { date: '2026-09-26T13:00:00Z', time: '13:00:00', office: 'Indiranagar SO', officeid: '21560001', event: 'Item Delivered(Addressee)', remarks: '', rts: false },
+    ...tracking.events,
+  ];
+  tracking.delivered = true;
+  await callJson('/api/shipments/refresh', { method: 'POST', body: { shipmentIds: [shipment.id] } });
+  assert.equal(ctx.db.getShipment(SHOP, shipment.id).status, 'DELIVERED');
+  assert.deepEqual(pushed(), ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED']);
+  assert.deepEqual(await callJson('/api/shipments/refresh', { method: 'POST', body: {} }), { checked: 0, newEvents: 0 });
+
+  // Storefront tracking page (app proxy) — signature required.
   const query = { shop: SHOP, path_prefix: '/apps/track', timestamp: String(Math.floor(Date.now() / 1000)), awb: AWB3.toLowerCase() };
   const message = Object.keys(query).sort().map((k) => `${k}=${query[k]}`).join('');
   const signature = crypto.createHmac('sha256', 'secret456').update(message).digest('hex');
@@ -304,9 +341,8 @@ test('with India Post tracking configured: tracking link, storefront page and we
   assert.equal(page.status, 200);
   assert.match(page.headers.get('content-type'), /application\/liquid/);
   const html = await page.text();
-  assert.match(html, /Out for delivery/);
+  assert.match(html, /Delivered/);
   assert.match(html, /Bag Dispatch/);
-  assert.deepEqual(pushed(), ['IN_TRANSIT', 'OUT_FOR_DELIVERY']);
 });
 
 test('tracking page without India Post API shows saved shipments only', async (t) => {
@@ -321,4 +357,22 @@ test('tracking page without India Post API shows saved shipments only', async (t
   const unknown = await (await fetch(`${base}/track?shop=${SHOP}&awb=${AWB2}`)).text();
   assert.match(unknown, /No shipment found/);
   assert.equal(calls.tracking.length, 0);
+
+  // "Update tracking" explains what is missing.
+  const refresh = await call('/api/shipments/refresh', { method: 'POST', body: {} });
+  assert.equal(refresh.status, 400);
+  assert.match((await refresh.json()).error, /India Post API username and password/);
+});
+
+test('India Post API server setting only accepts India Post HTTPS hosts', async (t) => {
+  const { ctx, server, call } = await setup();
+  t.after(() => server.close());
+  for (const bad of ['http://app.cept.gov.in/x', 'https://evil.example.com', 'https://cept.gov.in.evil.com']) {
+    const res = await call('/api/settings', { method: 'PUT', body: { settings: { indiaPost: { baseUrl: bad } } } });
+    assert.equal(res.status, 400, bad);
+  }
+  const ok = await call('/api/settings', { method: 'PUT', body: { settings: { indiaPost: { baseUrl: 'https://app.cept.gov.in/beextcustomer/', username: 'u', password: 'p' } } } });
+  assert.equal(ok.status, 200);
+  assert.equal(ctx.getSettings(SHOP).indiaPost.baseUrl, 'https://app.cept.gov.in/beextcustomer');
+  assert.equal(ctx.indiaPostFor(SHOP).baseUrl, 'https://app.cept.gov.in/beextcustomer');
 });

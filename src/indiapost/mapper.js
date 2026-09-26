@@ -31,6 +31,8 @@ export function isDocument(articleType) {
 export function defaultSettings() {
   return {
     indiaPost: {
+      // India Post API server; empty = the server set in the app's environment (INDIAPOST_BASE_URL).
+      baseUrl: '',
       username: '',
       password: '',
       bulkCustomerId: '',
