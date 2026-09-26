@@ -48,3 +48,48 @@ test('rejects failed logins', async () => {
   });
   await assert.rejects(bad.login(), /Invalid credentials/);
 });
+
+test('falls back to "Track single article" when bulk tracking is not subscribed', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    const u = String(url);
+    calls.push(`${init.method} ${u.replace('https://ip.test', '')}`);
+    if (u.endsWith('/v1/access/login')) return json({ message: 'Not found' }, 404);
+    if (u.endsWith('/v1/access/Login')) return json({ success: true, data: { access_token: 't', expires_in: 900 } });
+    if (u.endsWith('/v1/tracking/bulk')) return json({ success: false, message: 'API not subscribed' }, 403);
+    if (u.endsWith('/v1/tracking/RM019388105IN')) {
+      return json({
+        success: true,
+        data: {
+          trackingNumber: 'RM019388105IN',
+          currentStatus: 'Delivered',
+          origin: 'Hyderabad, Telangana',
+          destination: 'Kochi, Kerala',
+          history: [
+            { timestamp: '2025-10-26T11:15:00', location: 'Kochi SO', status: 'Item Delivered(Addressee)' },
+            { timestamp: '2025-10-24T14:05:00+05:30', location: 'Hyderabad GPO', status: 'Item Booked' },
+          ],
+        },
+      });
+    }
+    return json({ success: false, message: 'Tracking number does not exist' }, 404);
+  };
+  const client = new IndiaPostClient({ baseUrl: 'https://ip.test', username: 'u', password: 'p', fetchImpl });
+  const items = await client.trackBulk(['RM019388105IN', 'RM000000000IN']);
+  assert.equal(items.length, 1, 'unknown articles are skipped');
+  const [item] = items;
+  assert.equal(item.booking_details.article_number, 'RM019388105IN');
+  assert.equal(item.del_status.del_status, 'delivered');
+  assert.deepEqual(item.tracking_details.map((t) => t.event), ['Item Delivered(Addressee)', 'Item Booked']);
+
+  const { normalizeTrackingResult } = await import('../src/indiapost/events.js');
+  const result = normalizeTrackingResult(item);
+  assert.equal(result.delivered, true);
+  assert.equal(result.events[0].happenedAt, '2025-10-26T05:45:00.000Z', 'no offset → India time');
+  assert.equal(result.events[1].happenedAt, '2025-10-24T08:35:00.000Z', 'explicit +05:30 respected');
+
+  // Remembers: next time goes straight to single-article calls and the working login path.
+  calls.length = 0;
+  await client.trackBulk(['RM019388105IN']);
+  assert.deepEqual(calls, ['GET /v1/tracking/RM019388105IN']);
+});

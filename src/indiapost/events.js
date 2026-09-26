@@ -8,6 +8,11 @@ import { normalizeBarcode } from './barcode.js';
  * even though the clock value is IST, so the date + time parts are re-read as +05:30.
  */
 export function istTimestamp(date, time) {
+  // A timestamp with an explicit offset (e.g. +05:30) is exact; "Z" or none is read as India time.
+  if (!time && /T\d{2}:\d{2}(:\d{2}(\.\d+)?)?[+-]\d{2}:\d{2}$/.test(String(date ?? ''))) {
+    const exact = new Date(date);
+    return Number.isNaN(exact.getTime()) ? null : exact.toISOString();
+  }
   const day = String(date ?? '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
   const clock = /^\d{2}:\d{2}(:\d{2})?$/.test(String(time ?? '')) ? String(time) : String(date).slice(11, 19) || '00:00:00';

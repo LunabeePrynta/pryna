@@ -26,13 +26,23 @@ export class IndiaPostClient {
   }
 
   async login() {
-    const res = await this.fetch(`${this.baseUrl}/v1/access/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ username: this.username, password: this.password }),
-      signal: AbortSignal.timeout(this.timeoutMs),
-    });
-    const body = await readBody(res);
+    // The approach document says /v1/access/login, the developer portal shows /v1/access/Login.
+    const paths = this.loginPath ? [this.loginPath] : ['/v1/access/login', '/v1/access/Login'];
+    let res;
+    let body;
+    for (const path of paths) {
+      res = await this.fetch(`${this.baseUrl}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ username: this.username, password: this.password }),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+      body = await readBody(res);
+      if (res.status !== 404 && res.status !== 405) {
+        this.loginPath = path;
+        break;
+      }
+    }
     if (!res.ok || !body?.success || !body?.data?.access_token) {
       throw new IndiaPostError(`India Post login failed: ${describe(body) || res.status}`, { status: res.status, body });
     }
@@ -93,12 +103,72 @@ export class IndiaPostClient {
   }
 
   /** Tracking for up to 500 articles booked under this customer. */
+  /**
+   * Tracking for up to 500 articles. Uses the Bulk Tracking API; if the account isn't subscribed to it,
+   * switches (and stays) on "Track single article" (GET /v1/tracking/{trackingNumber}), one call per article.
+   * Always returns items in the bulk format.
+   */
   async trackBulk(barcodes) {
     if (!barcodes.length) return [];
     if (barcodes.length > 500) throw new IndiaPostError('Tracking API accepts at most 500 articles per request');
-    const body = await this.requestJson('POST', '/v1/tracking/bulk', { json: { bulk: barcodes } });
-    return Array.isArray(body?.data) ? body.data : [];
+    if (this.trackingMode !== 'single') {
+      try {
+        const body = await this.requestJson('POST', '/v1/tracking/bulk', { json: { bulk: barcodes } });
+        this.trackingMode = 'bulk';
+        return Array.isArray(body?.data) ? body.data : [];
+      } catch (err) {
+        if (!(err instanceof IndiaPostError) || ![401, 403, 404, 405].includes(err.status) || this.trackingMode === 'bulk') throw err;
+        this.trackingMode = 'single';
+      }
+    }
+    return this.trackEach(barcodes);
   }
+
+  async trackSingle(barcode) {
+    const res = await this.request('GET', `/v1/tracking/${encodeURIComponent(barcode)}`);
+    if (res.status === 404) return null; // not booked / not scanned yet
+    const body = await readBody(res);
+    if (!res.ok || body?.success === false) {
+      throw new IndiaPostError(`India Post tracking failed: ${describe(body) || res.status}`, { status: res.status, body });
+    }
+    return body?.data ? singleToBulkItem(barcode, body.data) : null;
+  }
+
+  async trackEach(barcodes, concurrency = 4) {
+    const results = [];
+    let next = 0;
+    const worker = async () => {
+      while (next < barcodes.length) {
+        const barcode = barcodes[next++];
+        const item = await this.trackSingle(barcode);
+        if (item) results.push(item);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(concurrency, barcodes.length) }, worker));
+    return results;
+  }
+}
+
+/** Converts a "Track single article" response into the Bulk Tracking item format. */
+export function singleToBulkItem(barcode, data) {
+  const status = String(data.currentStatus ?? '');
+  return {
+    booking_details: {
+      article_number: data.trackingNumber || barcode,
+      booked_at: data.origin || null,
+      delivery_location: data.destination || null,
+    },
+    tracking_details: (Array.isArray(data.history) ? data.history : []).map((h) => ({
+      date: h.timestamp,
+      time: null,
+      office: h.location,
+      officeid: null,
+      event: h.status,
+      remarks: h.remarks ?? '',
+      rts: false,
+    })),
+    del_status: { del_status: /delivered/i.test(status) && !/not delivered|undelivered/i.test(status) ? 'delivered' : 'not delivered' },
+  };
 }
 
 async function readBody(res) {

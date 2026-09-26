@@ -106,6 +106,11 @@ With the India Post API username and password saved in Settings:
   - the order's `indiapost.tracking` metafield is updated
 - **Each order's window** shows the full India Post tracking history and when it was last checked.
 
+The app uses India Post's **Bulk Tracking Lookup** (`POST /v1/tracking/bulk`, up to 500 articles per call). If
+your India Post account is only subscribed to **Get tracking information for a parcel**
+(`GET /v1/tracking/{trackingNumber}`), the app switches to that automatically and checks orders one by one.
+Login works with both `/v1/access/login` and `/v1/access/Login`.
+
 India Post's tracking API only returns articles booked under your own India Post customer id. The India Post
 server must also allow your server's IP address (`139.59.25.155`).
 
