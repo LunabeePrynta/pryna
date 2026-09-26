@@ -2,7 +2,7 @@
 # in the Partner Dashboard, then `shopify app deploy` to push scopes, webhooks and the app proxy.
 client_id = "YOUR_SHOPIFY_API_KEY"
 name = "India Post Shipping"
-application_url = "https://your-app.example.com"
+application_url = "https://ship.lunabee.in"
 embedded = true
 
 [build]
@@ -14,7 +14,7 @@ include_config_on_deploy = true
 scopes = "read_orders,write_orders,read_customers,write_customers,read_merchant_managed_fulfillment_orders,write_merchant_managed_fulfillment_orders,read_third_party_fulfillment_orders,write_third_party_fulfillment_orders,read_assigned_fulfillment_orders,write_assigned_fulfillment_orders,write_fulfillments"
 
 [auth]
-redirect_urls = ["https://your-app.example.com/auth/callback"]
+redirect_urls = ["https://ship.lunabee.in/auth/callback"]
 
 [webhooks]
 api_version = "2026-07"
@@ -29,7 +29,7 @@ api_version = "2026-07"
 
 # Storefront tracking page: https://<store>/apps/track?awb=EB123456785IN
 [app_proxy]
-url = "https://your-app.example.com/proxy"
+url = "https://ship.lunabee.in/proxy"
 subpath = "track"
 prefix = "apps"
 
