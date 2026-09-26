@@ -83,6 +83,13 @@ export function createApp(ctx) {
     await receiveEvents(req, res, shop);
   }));
 
+  // Lets India Post's "Test" button (or a browser) check that a store's link is valid.
+  app.get('/webhooks/indiapost/:token', (req, res) => {
+    const shop = /^[a-f0-9]{48}$/.test(req.params.token) ? db.findShopByWebhookToken(req.params.token) : null;
+    if (!shop) return res.sendStatus(404);
+    res.json({ success: true, message: 'India Post webhook link is active' });
+  });
+
   // Legacy shared link protected by INDIAPOST_WEBHOOK_SECRET (all stores).
   app.post('/webhooks/indiapost', express.json({ limit: '2mb' }), asyncRoute(async (req, res) => {
     if (!allowedSource(req)) return res.sendStatus(403);

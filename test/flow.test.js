@@ -406,6 +406,10 @@ test('India Post connection: per-store webhook link, connection test and on/off 
 
   const event = { article_number: AWB1, event_code: 'BAG_DISPATCH', event_description: 'Bag Dispatch', event_date: '2026-09-26', event_time: '10:00:00', event_office_name: 'Kochi NSH' };
   const path = new URL(link).pathname;
+  assert.deepEqual(await (await fetch(`${base}${path}`)).json(), { success: true, message: 'India Post webhook link is active' });
+  // India Post's "Test" button may send an empty or sample body — accepted without changing anything.
+  const probe = await fetch(`${base}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ test: true }) });
+  assert.deepEqual(await probe.json(), { success: true, received: 1, stored: 0 });
   const send = (p) => fetch(`${base}${p}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event) });
   assert.equal((await send('/webhooks/indiapost/' + 'a'.repeat(48))).status, 404);
   assert.deepEqual(await (await send(path)).json(), { success: true, received: 1, stored: 1 });

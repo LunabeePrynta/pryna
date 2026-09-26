@@ -98,7 +98,7 @@ export function shopifyStatusFor(event) {
   if (/pickup request|pickup assigned|pickup cancel/.test(text)) return null;
   if (/returned|return to sender/.test(text) || event.rts) return 'FAILURE';
   if (/out for delivery|invoiced/.test(text)) return 'OUT_FOR_DELIVERY';
-  if (/on hold/.test(text)) return 'DELAYED';
+  if (/\bhold\b/.test(text)) return 'DELAYED';
   if (/not delivered|delivery attempt|addressee (absent|not)/.test(text)) return 'ATTEMPTED_DELIVERY';
   if (/picked ?up|inducted|booked/.test(text)) return 'CARRIER_PICKED_UP';
   if (/bag|dispatch|received|redirect/.test(text)) return 'IN_TRANSIT';
