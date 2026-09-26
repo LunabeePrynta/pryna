@@ -46,3 +46,14 @@ test('encrypts secrets at rest', () => {
   assert.equal(decryptSecret(enc, 'k'), 'Dop@1234');
   assert.throws(() => decryptSecret(enc, 'other'));
 });
+
+test('explains network failures in plain language', async () => {
+  const { networkReason } = await import('../src/server.js');
+  const failed = (code, extra = {}) => Object.assign(new TypeError('fetch failed'), { cause: { code, ...extra } });
+  assert.match(networkReason(failed('UND_ERR_CONNECT_TIMEOUT')), /timed out.*whitelist/);
+  assert.match(networkReason(Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' })), /timed out/);
+  assert.match(networkReason(failed('ECONNREFUSED')), /refused.*whitelist/);
+  assert.match(networkReason(failed('ENOTFOUND', { hostname: 'x.cept.gov.in' })), /x\.cept\.gov\.in could not be found/);
+  assert.match(networkReason(failed('UNABLE_TO_VERIFY_LEAF_SIGNATURE')), /certificate/);
+  assert.match(networkReason(failed('EWHATEVER', { message: 'odd' })), /fetch failed — EWHATEVER — odd/);
+});

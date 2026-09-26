@@ -304,7 +304,7 @@ export function createApp(ctx) {
       await ctx.indiaPostFor(req.shop, settings).login();
       res.json({ lastTest: ctx.recordConnectionTest(req.shop, true, 'Connected to India Post') });
     } catch (err) {
-      const reason = err instanceof IndiaPostError ? err.message : `Could not reach India Post: ${err.message}`;
+      const reason = err instanceof IndiaPostError ? err.message : `Could not reach India Post: ${networkReason(err)}`;
       res.json({ lastTest: ctx.recordConnectionTest(req.shop, false, reason) });
     }
   }));
@@ -366,6 +366,24 @@ export function createApp(ctx) {
 }
 
 const ALLOWED_EXTENSION_ORIGINS = [/^https:\/\/extensions\.shopifycdn\.com$/, /^https:\/\/admin\.shopify\.com$/, /^https:\/\/[a-z0-9-]+\.myshopify\.com$/];
+
+/** Plain-language reason for a failed connection (fetch only says "fetch failed"). */
+export function networkReason(err) {
+  const cause = err?.cause ?? {};
+  const code = cause.code ?? err?.code ?? '';
+  const host = cause.hostname ?? cause.host ?? '';
+  if (err?.name === 'TimeoutError' || err?.name === 'AbortError' || /TIMEDOUT|UND_ERR_CONNECT_TIMEOUT/.test(code)) {
+    return 'no answer from the India Post server (timed out). Ask India Post to whitelist this server\'s IP address.';
+  }
+  if (code === 'ECONNREFUSED' || code === 'ECONNRESET' || code === 'EHOSTUNREACH' || code === 'ENETUNREACH') {
+    return `the India Post server refused or dropped the connection (${code}). Ask India Post to whitelist this server's IP address.`;
+  }
+  if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') return `the server address ${host || ''} could not be found — check the API server address.`.replace('  ', ' ');
+  if (/CERT|SSL|TLS|SIGNATURE|SELF_SIGNED|UNABLE_TO_(VERIFY|GET)/i.test(code) || /certificate/i.test(cause.message ?? '')) {
+    return `secure connection failed (${code || cause.message}). The India Post server's certificate was not accepted.`;
+  }
+  return [err?.message, code, cause.message].filter(Boolean).join(' — ');
+}
 
 export function isIndiaPostUrl(value) {
   try {
