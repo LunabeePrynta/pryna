@@ -185,23 +185,50 @@
         </div>
       </div>
 
+      <div class="card" id="ip-card">
+        <div class="toolbar" style="margin-bottom:4px">
+          <h2 style="margin:0">India Post API connection</h2>
+          <span id="ip-status" class="badge"></span>
+          <span class="spacer"></span>
+        </div>
+        <p class="muted small">Connect your own India Post API account to get live tracking updates on every order. Ask India Post (integrations.cept@indiapost.gov.in) for API access if you don't have it yet.</p>
+        <label class="check"><input type="checkbox" name="indiaPost.enabled"> Get live tracking updates from the India Post API</label>
+        <div class="grid" style="margin-top:8px">
+          <label class="field">API server
+            <select id="ip-server">
+              <option value="test">India Post test server (UAT)</option>
+              <option value="custom">Production (address from India Post)</option>
+            </select></label>
+          <label class="field" id="ip-url-field">Production API address<small>e.g. https://….cept.gov.in/beextcustomer</small><input name="indiaPost.baseUrl" id="ip-base-url" autocomplete="off"></label>
+          <label class="field">API username<input name="indiaPost.username" autocomplete="off"></label>
+          <label class="field">API password<input name="indiaPost.password" type="password" autocomplete="new-password"></label>
+          <label class="field">Bulk customer id<small>10 digits, from India Post</small><input name="indiaPost.bulkCustomerId" inputmode="numeric"></label>
+        </div>
+        <div class="toolbar" style="margin-top:12px">
+          <button type="button" class="btn primary" id="test-connection">Save &amp; test connection</button>
+          <span id="test-result" class="muted small"></span>
+        </div>
+        <div class="notice info" style="margin-top:4px">
+          <strong>Send these to India Post</strong> so they can allow your connection and push tracking updates:
+          <div class="grid tight" style="margin-top:8px">
+            <div><span class="muted small">Server IP to whitelist</span><div><code id="server-ip">—</code></div></div>
+            <div class="span2"><span class="muted small">Your private webhook link</span>
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><code id="webhook-url" style="flex:1"></code>
+                <button type="button" class="btn" id="copy-webhook">Copy</button>
+                <button type="button" class="btn" id="rotate-webhook">New link</button></div></div>
+          </div>
+        </div>
+        <p id="tracking-info" class="muted small" hidden>Customer tracking page: <a id="tracking-page" target="_blank" rel="noopener"></a></p>
+      </div>
+
       <div class="card">
-        <h2>India Post account <span class="muted small">(optional)</span></h2>
-        <p class="muted small">Customer and contract ids fill the “India Post upload” sheet in the Excel file. Username and password are only needed for live tracking updates.</p>
+        <h2>India Post booking details <span class="muted small">(for the Excel upload sheet)</span></h2>
         <div class="grid">
-          <label class="field">Bulk customer id<input name="indiaPost.bulkCustomerId" inputmode="numeric"></label>
           <label class="field">Speed Post contract id<input name="indiaPost.contracts.SPEED_POST" inputmode="numeric"></label>
           <label class="field">Business Parcel contract id<input name="indiaPost.contracts.BUSINESS_PARCEL" inputmode="numeric"></label>
           <label class="field">Handover<select name="mode"><option value="DROPOFF">Drop-off at post office</option><option value="PICKUP">Pickup from my address</option></select></label>
           <label class="field">Post office id<small>8 digits</small><input name="officeId" inputmode="numeric"></label>
-          <label class="field span2">API server<small>Leave empty for India Post's test server. Enter the production address India Post gave you.</small><input name="indiaPost.baseUrl" id="ip-base-url" placeholder="https://test.cept.gov.in/beextcustomer" autocomplete="off"></label>
-          <label class="field">API username<small>For live tracking</small><input name="indiaPost.username" autocomplete="off"></label>
-          <label class="field">API password<input name="indiaPost.password" type="password" autocomplete="new-password"></label>
         </div>
-        <div class="toolbar" style="margin-top:12px">
-          <button type="button" class="btn" id="test-connection">Test tracking connection</button><span id="test-result" class="muted"></span>
-        </div>
-        <p id="tracking-info" class="muted small" hidden>Customer tracking page: <a id="tracking-page" target="_blank" rel="noopener"></a><br>India Post webhook: <code id="webhook-url"></code></p>
       </div>
 
       <div class="toolbar"><span class="spacer"></span><button class="btn primary" type="submit">Save settings</button></div>
@@ -746,29 +773,86 @@
     link.href = boot.trackingPageUrl;
     link.textContent = boot.trackingPageUrl;
     $('#webhook-url').textContent = boot.webhookUrl;
+    $('#server-ip').textContent = boot.serverIp || 'ask your app provider';
+    showConnection(boot.settings);
+  }
+
+  function syncServerField() {
+    const custom = $('#ip-server').value === 'custom';
+    $('#ip-url-field').hidden = !custom;
+    if (!custom) $('#ip-base-url').value = '';
+  }
+
+  function showConnection(settings) {
+    const ip = settings?.indiaPost ?? {};
+    $('#ip-server').value = ip.baseUrl ? 'custom' : 'test';
+    syncServerField();
+    const pill = $('#ip-status');
+    const test = ip.lastTest;
+    let text = 'Not connected';
+    let cls = 'badge';
+    if (ip.enabled === false) text = 'Off';
+    else if (test?.ok) { text = 'Connected'; cls = 'badge DELIVERED'; }
+    else if (test) { text = 'Connection failed'; cls = 'badge RETURNED'; }
+    pill.className = cls;
+    pill.textContent = text;
+    $('#test-result').textContent = test ? `${test.message} · tested ${fmtDate(test.at)}` : '';
+  }
+
+  $('#ip-server').addEventListener('change', syncServerField);
+
+  async function saveSettingsNow() {
+    const { settings } = await api('/settings', { method: 'PUT', body: { settings: readSettings() } });
+    fillSettings(settings);
+    state.settings = settings;
+    const boot = await api('/bootstrap');
+    state.trackingEnabled = boot.trackingEnabled;
+    showTrackingInfo(boot);
+    return settings;
   }
 
   $('#settings-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      const { settings } = await api('/settings', { method: 'PUT', body: { settings: readSettings() } });
-      fillSettings(settings);
-      state.settings = settings;
-      const boot = await api('/bootstrap');
-      state.trackingEnabled = boot.trackingEnabled;
-      showTrackingInfo(boot);
+      await saveSettingsNow();
       toast('Settings saved');
     } catch (err) {
       toast(err.message, true);
     }
   });
-  $('#test-connection').addEventListener('click', async () => {
-    $('#test-result').textContent = 'Testing… (save first if you changed the login)';
+  $('#test-connection').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    $('#test-result').textContent = 'Saving and connecting to India Post…';
     try {
-      const r = await api('/settings/test', { method: 'POST' });
-      $('#test-result').textContent = r.message;
+      await saveSettingsNow();
+      const { lastTest } = await api('/settings/test', { method: 'POST' });
+      state.settings.indiaPost.lastTest = lastTest;
+      showConnection(state.settings);
+      toast(lastTest.message, !lastTest.ok);
     } catch (err) {
       $('#test-result').textContent = err.message;
+      toast(err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  $('#copy-webhook').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText($('#webhook-url').textContent);
+      toast('Webhook link copied');
+    } catch {
+      toast('Select the link and copy it manually', true);
+    }
+  });
+  $('#rotate-webhook').addEventListener('click', async () => {
+    if (!confirm('Create a new webhook link? The old link stops working, so you must send the new one to India Post.')) return;
+    try {
+      const { webhookUrl } = await api('/settings/webhook-link', { method: 'POST' });
+      $('#webhook-url').textContent = webhookUrl;
+      toast('New webhook link created');
+    } catch (err) {
+      toast(err.message, true);
     }
   });
 
@@ -781,7 +865,6 @@
       state.products = boot.products;
       state.settings = boot.settings;
       state.trackingEnabled = boot.trackingEnabled;
-      if (boot.defaultIndiaPostUrl) $('#ip-base-url').placeholder = boot.defaultIndiaPostUrl;
       $('#product-select').innerHTML = Object.entries(boot.products).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join('');
       fillSettings(boot.settings);
       showTrackingInfo(boot);

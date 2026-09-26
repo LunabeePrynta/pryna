@@ -67,14 +67,28 @@ export function createApp(ctx) {
   });
 
   // ---------- India Post tracking webhook ----------
+  const receiveEvents = async (req, res, shop) => {
+    const events = (Array.isArray(req.body) ? req.body : [req.body]).slice(0, 1000);
+    let stored = 0;
+    for (const event of events) if ((await handleIndiaPostEvent(ctx, event, { shop })).stored) stored += 1;
+    res.json({ success: true, received: events.length, stored });
+  };
+  const allowedSource = (req) => !indiaPost.webhookIps.length || indiaPost.webhookIps.includes(req.ip);
+
+  // Each store's private link: https://<app>/webhooks/indiapost/<token> (shown in the store's Settings).
+  app.post('/webhooks/indiapost/:token', express.json({ limit: '2mb' }), asyncRoute(async (req, res) => {
+    if (!allowedSource(req)) return res.sendStatus(403);
+    const shop = /^[a-f0-9]{48}$/.test(req.params.token) ? db.findShopByWebhookToken(req.params.token) : null;
+    if (!shop) return res.sendStatus(404);
+    await receiveEvents(req, res, shop);
+  }));
+
+  // Legacy shared link protected by INDIAPOST_WEBHOOK_SECRET (all stores).
   app.post('/webhooks/indiapost', express.json({ limit: '2mb' }), asyncRoute(async (req, res) => {
-    if (indiaPost.webhookIps.length && !indiaPost.webhookIps.includes(req.ip)) return res.sendStatus(403);
+    if (!allowedSource(req)) return res.sendStatus(403);
     const secret = req.get('X-Webhook-Secret') ?? req.query.secret;
     if (!indiaPost.webhookSecret || secret !== indiaPost.webhookSecret) return res.sendStatus(401);
-    const events = Array.isArray(req.body) ? req.body : [req.body];
-    let stored = 0;
-    for (const event of events) if ((await handleIndiaPostEvent(ctx, event)).stored) stored += 1;
-    res.json({ success: true, received: events.length, stored });
+    await receiveEvents(req, res);
   }));
 
   app.use(express.json({ limit: '1mb' }));
@@ -140,7 +154,8 @@ export function createApp(ctx) {
       statusLabels: STATUS_LABELS,
       trackingEnabled: ctx.hasTracking(req.shop),
       defaultIndiaPostUrl: ctx.config.indiaPost.baseUrl,
-      webhookUrl: `${ctx.config.appUrl}/webhooks/indiapost`,
+      webhookUrl: ctx.webhookUrl(req.shop),
+      serverIp: ctx.config.serverIp,
       trackingPageUrl: `https://${req.shop}${shopify.proxyPath}`,
     });
   });
@@ -275,12 +290,22 @@ export function createApp(ctx) {
 
   api.post('/settings/test', asyncRoute(async (req, res) => {
     const settings = ctx.getSettings(req.shop);
-    const client = ctx.indiaPostFor(req.shop, settings);
-    await client.login();
-    const pincode = settings.sender.pincode;
-    const offices = pincode ? await client.pincodeSearch(pincode).catch(() => null) : null;
-    res.json({ ok: true, message: 'Connected to India Post', offices: filterOffices(offices) });
+    if (!settings.indiaPost.username || !settings.indiaPost.password) {
+      return res.json({ lastTest: ctx.recordConnectionTest(req.shop, false, 'Enter and save the India Post API username and password first.') });
+    }
+    try {
+      await ctx.indiaPostFor(req.shop, settings).login();
+      res.json({ lastTest: ctx.recordConnectionTest(req.shop, true, 'Connected to India Post') });
+    } catch (err) {
+      const reason = err instanceof IndiaPostError ? err.message : `Could not reach India Post: ${err.message}`;
+      res.json({ lastTest: ctx.recordConnectionTest(req.shop, false, reason) });
+    }
   }));
+
+  api.post('/settings/webhook-link', (req, res) => {
+    ctx.webhookToken(req.shop, { rotate: true });
+    res.json({ webhookUrl: ctx.webhookUrl(req.shop) });
+  });
 
   api.get('/pincode/:pin', asyncRoute(async (req, res) => {
     if (!/^\d{6}$/.test(req.params.pin)) return res.status(400).json({ error: 'Pincode must be 6 digits' });

@@ -376,3 +376,51 @@ test('India Post API server setting only accepts India Post HTTPS hosts', async 
   assert.equal(ctx.getSettings(SHOP).indiaPost.baseUrl, 'https://app.cept.gov.in/beextcustomer');
   assert.equal(ctx.indiaPostFor(SHOP).baseUrl, 'https://app.cept.gov.in/beextcustomer');
 });
+
+test('India Post connection: per-store webhook link, connection test and on/off switch', async (t) => {
+  const { ctx, server, base, call, callJson, calls, tracking } = await setup();
+  t.after(() => server.close());
+
+  // Test connection before any login is saved.
+  let { lastTest } = await callJson('/api/settings/test', { method: 'POST' });
+  assert.equal(lastTest.ok, false);
+  assert.match(lastTest.message, /username and password/);
+
+  await call('/api/settings', { method: 'PUT', body: { settings: { ...SETTINGS, indiaPost: { ...SETTINGS.indiaPost, username: 'u', password: 'p', webhookToken: 'attacker-chosen' } } } });
+  ({ lastTest } = await callJson('/api/settings/test', { method: 'POST' }));
+  assert.equal(lastTest.ok, true);
+  assert.equal(lastTest.message, 'Connected to India Post');
+  const boot = await callJson('/api/bootstrap');
+  assert.equal(boot.settings.indiaPost.lastTest.ok, true);
+  assert.equal(boot.settings.indiaPost.password, '••••••••');
+
+  // Each store has its own private webhook link; the token can't be set from the form.
+  const link = boot.webhookUrl;
+  assert.match(link, /^https:\/\/app\.test\/webhooks\/indiapost\/[a-f0-9]{48}$/);
+  assert.notEqual(ctx.getSettings(SHOP).indiaPost.webhookToken, 'attacker-chosen');
+
+  tracking.events = [];
+  await call('/api/order/save', { method: 'POST', body: { orderId: 'gid://shopify/Order/1001', trackingNumber: AWB1 } });
+  // Another store with a shipment using the same article number is not touched by this store's link.
+  const other = ctx.db.createShipment({ shop: 'other.myshopify.com', orderId: 'gid://shopify/Order/9', barcode: AWB1, status: 'BOOKED' });
+
+  const event = { article_number: AWB1, event_code: 'BAG_DISPATCH', event_description: 'Bag Dispatch', event_date: '2026-09-26', event_time: '10:00:00', event_office_name: 'Kochi NSH' };
+  const path = new URL(link).pathname;
+  const send = (p) => fetch(`${base}${p}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event) });
+  assert.equal((await send('/webhooks/indiapost/' + 'a'.repeat(48))).status, 404);
+  assert.deepEqual(await (await send(path)).json(), { success: true, received: 1, stored: 1 });
+  assert.equal(ctx.db.getShipmentByOrder(SHOP, 'gid://shopify/Order/1001').status, 'IN_TRANSIT');
+  assert.equal(ctx.db.getShipment('other.myshopify.com', other.id).status, 'BOOKED');
+
+  // A new link replaces the old one.
+  const { webhookUrl: fresh } = await callJson('/api/settings/webhook-link', { method: 'POST' });
+  assert.notEqual(fresh, link);
+  assert.equal((await send(path)).status, 404);
+
+  // Switching live tracking off stops India Post calls.
+  await call('/api/settings', { method: 'PUT', body: { settings: { indiaPost: { ...SETTINGS.indiaPost, enabled: false, username: 'u', password: '••••••••' } } } });
+  assert.equal((await callJson('/api/bootstrap')).trackingEnabled, false);
+  const before = calls.tracking.length;
+  assert.equal((await call('/api/shipments/refresh', { method: 'POST', body: {} })).status, 400);
+  assert.equal(calls.tracking.length, before);
+});

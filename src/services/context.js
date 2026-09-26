@@ -3,6 +3,7 @@
 import { IndiaPostClient } from '../indiapost/client.js';
 import { defaultSettings, mergeSettings } from '../indiapost/mapper.js';
 import { ShopifyAdmin } from '../shopify/admin.js';
+import crypto from 'node:crypto';
 import { decryptSecret, encryptSecret } from '../shopify/auth.js';
 
 export const PASSWORD_MASK = '••••••••';
@@ -34,12 +35,37 @@ export function createContext({ db, config, fetchImpl = fetch, logger = console 
     saveSettings(shop, input) {
       const current = mergeSettings(db.getSettingsRaw(shop));
       const next = mergeSettings({ ...current, ...pick(input, Object.keys(defaultSettings())) });
+      // Server-managed values are never taken from the form.
+      next.indiaPost.webhookToken = current.indiaPost.webhookToken;
+      next.indiaPost.lastTest = current.indiaPost.lastTest;
       const password = input?.indiaPost?.password;
       next.indiaPost.password =
         password === undefined || password === PASSWORD_MASK ? current.indiaPost.password : encryptSecret(password, secret);
       db.saveSettingsRaw(shop, next);
       clients.delete(shop);
       return ctx.getPublicSettings(shop);
+    },
+
+    /** The store's private India Post webhook token (created on first use). */
+    webhookToken(shop, { rotate = false } = {}) {
+      const raw = mergeSettings(db.getSettingsRaw(shop));
+      if (!raw.indiaPost.webhookToken || rotate) {
+        raw.indiaPost.webhookToken = crypto.randomBytes(24).toString('hex');
+        db.saveSettingsRaw(shop, raw);
+      }
+      return raw.indiaPost.webhookToken;
+    },
+
+    webhookUrl(shop) {
+      return `${config.appUrl}/webhooks/indiapost/${ctx.webhookToken(shop)}`;
+    },
+
+    /** Stores the result of the last "Test connection". */
+    recordConnectionTest(shop, ok, message) {
+      const raw = mergeSettings(db.getSettingsRaw(shop));
+      raw.indiaPost.lastTest = { ok, message, at: new Date().toISOString() };
+      db.saveSettingsRaw(shop, raw);
+      return raw.indiaPost.lastTest;
     },
 
     indiaPostFor(shop, settings = ctx.getSettings(shop)) {
@@ -61,7 +87,7 @@ export function createContext({ db, config, fetchImpl = fetch, logger = console 
 
     /** True when India Post tracking API credentials are configured for the shop. */
     hasTracking(shop, settings = ctx.getSettings(shop)) {
-      return Boolean(settings.indiaPost.username && settings.indiaPost.password);
+      return Boolean(settings.indiaPost.enabled !== false && settings.indiaPost.username && settings.indiaPost.password);
     },
 
     /**

@@ -59,15 +59,18 @@ next time.
 - **Shipping defaults:** product, default and packaging weight, document and parcel sizes, COD, insurance, and
   whether to email the customer.
 - **Sender address:** used in the Excel upload sheet.
-- **India Post account (optional):**
-  - **API server:** leave empty for India Post's test server, or enter the production address India Post gave
-    you. Only `https://…cept.gov.in` / `…indiapost.gov.in` addresses are accepted, because your login is sent
-    there.
-  - Customer and contract ids and post office id fill the upload sheet.
-  - The API username and password turn on **live tracking**. With them, the app checks India Post every 30
-    minutes and also accepts India Post's webhook. It sends each status (in transit, out for delivery,
-    delivered) to the Shopify order. The customer's tracking link then opens your store's own page,
-    `https://<store>/apps/track`. Without them, Shopify's standard India Post tracking link is used.
+- **India Post API connection:** each store connects its own India Post API account here. Nothing is set
+  on the server, so the same app can serve many merchants.
+  - **Live tracking on/off.**
+  - **API server:** India Post's test server (UAT), or the **production** address India Post gave the
+    merchant. Only `https://…cept.gov.in` / `…indiapost.gov.in` addresses are accepted, because the login is
+    sent there.
+  - **API username, password** (stored encrypted) and **bulk customer id**.
+  - **Save & test connection:** logs in to India Post and shows **Connected** or the reason it failed.
+  - **Send these to India Post:** the server IP to whitelist, and the store's **private webhook link**.
+    Events on a store's link only update that store's orders. **New link** replaces a leaked link.
+- **India Post booking details:** contract ids, handover (drop-off or pickup) and post office id. These are
+  used in the Excel upload sheet.
 
 ### Tracking updates from India Post
 

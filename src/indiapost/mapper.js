@@ -31,6 +31,8 @@ export function isDocument(articleType) {
 export function defaultSettings() {
   return {
     indiaPost: {
+      // Live tracking through the India Post API (needs username + password).
+      enabled: true,
       // India Post API server; empty = the server set in the app's environment (INDIAPOST_BASE_URL).
       baseUrl: '',
       username: '',

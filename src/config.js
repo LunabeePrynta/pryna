@@ -20,7 +20,8 @@ export const config = {
   indiaPost: {
     // UAT: https://test.cept.gov.in/beextcustomer — switch to the production host after go-live.
     baseUrl: env('INDIAPOST_BASE_URL', 'https://test.cept.gov.in/beextcustomer').replace(/\/$/, ''),
-    // Shared secret India Post must send (?secret= or X-Webhook-Secret) when pushing tracking events.
+    // Legacy shared webhook secret (?secret= or X-Webhook-Secret). Each store also gets its own private
+    // webhook link (/webhooks/indiapost/<token>) shown in its Settings.
     webhookSecret: env('INDIAPOST_WEBHOOK_SECRET', ''),
     // Optional comma separated allow-list of India Post source IPs for the webhook.
     webhookIps: env('INDIAPOST_WEBHOOK_IPS', '')
@@ -28,6 +29,8 @@ export const config = {
       .map((ip) => ip.trim())
       .filter(Boolean),
   },
+  // Public IP of this server, shown to merchants so India Post can whitelist it.
+  serverIp: env('SERVER_PUBLIC_IP', ''),
   // 32 byte key (hex or base64) used to encrypt India Post passwords at rest.
   encryptionKey: env('ENCRYPTION_KEY', ''),
   databasePath: env('DATABASE_PATH', path.resolve('data/app.db')),

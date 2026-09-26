@@ -148,6 +148,13 @@ function createStore(db) {
     },
 
     // ---- settings ----
+    findShopByWebhookToken(token) {
+      if (!token) return null;
+      const row = db
+        .prepare(`SELECT shop FROM settings WHERE json_extract(data, '$.indiaPost.webhookToken') = ?`)
+        .get(String(token));
+      return row?.shop ?? null;
+    },
     getSettingsRaw(shop) {
       const row = db.prepare('SELECT data FROM settings WHERE shop = ?').get(shop);
       return row ? parseJson(row.data, {}) : null;

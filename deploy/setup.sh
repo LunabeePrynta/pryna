@@ -87,6 +87,11 @@ else
   sed -i "s#^SHOPIFY_APP_URL=.*#SHOPIFY_APP_URL=https://$DOMAIN#" "$ENV_FILE"
 fi
 
+# Public IP shown in the app's Settings, so merchants can ask India Post to whitelist it.
+if ! grep -q '^SERVER_PUBLIC_IP=' "$ENV_FILE"; then
+  echo "SERVER_PUBLIC_IP=$(curl -fsS https://api.ipify.org || true)" >> "$ENV_FILE"
+fi
+
 echo "==> Service"
 install -m 644 "$APP_DIR/deploy/indiapost-app.service" /etc/systemd/system/indiapost-app.service
 systemctl daemon-reload
@@ -117,4 +122,4 @@ else
 fi
 echo
 echo "Server public IP (give this to India Post for whitelisting): $(curl -fsS https://api.ipify.org || echo unknown)"
-echo "India Post webhook URL: https://$DOMAIN/webhooks/indiapost?secret=$(grep '^INDIAPOST_WEBHOOK_SECRET=' "$ENV_FILE" | cut -d= -f2)"
+echo "Each store's India Post webhook link is shown in the app: Settings → India Post API connection."

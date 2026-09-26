@@ -143,10 +143,11 @@ export async function pollAllShops(ctx) {
 }
 
 /** Handles one event pushed by India Post to the webhook endpoint. */
-export async function handleIndiaPostEvent(ctx, payload) {
+export async function handleIndiaPostEvent(ctx, payload, { shop } = {}) {
   const normalized = normalizeWebhookEvent(payload);
   if (!normalized) return { stored: false, reason: 'invalid payload' };
-  const shipments = ctx.db.findShipmentsByBarcode(normalized.barcode);
+  // A store's private webhook link only updates that store's shipments.
+  const shipments = ctx.db.findShipmentsByBarcode(normalized.barcode).filter((s) => !shop || s.shop === shop);
   if (!shipments.length) return { stored: false, reason: 'unknown article' };
   let stored = 0;
   for (const shipment of shipments) {
