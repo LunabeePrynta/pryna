@@ -1,6 +1,6 @@
 # Shopify app configuration. Run `shopify app config link` to connect this file to your app
 # in the Partner Dashboard, then `shopify app deploy` to push scopes, webhooks and the app proxy.
-client_id = "YOUR_SHOPIFY_API_KEY"
+client_id = "6d0d0655ebe6065f28127897e0cb166e"
 name = "India Post Shipping"
 application_url = "https://ship.lunabee.in"
 embedded = true
