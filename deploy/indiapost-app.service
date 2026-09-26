@@ -1,0 +1,22 @@
+[Unit]
+Description=India Post Shipping Shopify app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=indiapost
+Group=indiapost
+WorkingDirectory=/opt/indiapost-app
+EnvironmentFile=/etc/indiapost-app.env
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning src/server.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/indiapost-app
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

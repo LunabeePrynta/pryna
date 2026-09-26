@@ -81,6 +81,9 @@ shopify.app.toml         Scopes, webhooks, app proxy
 
 ## Setup
 
+> **Hosting on DigitalOcean (or any Ubuntu 24.04 server):** follow [`deploy/DEPLOY.md`](deploy/DEPLOY.md). The
+> `deploy/setup.sh` script installs everything on the server with one command.
+
 Requirements: Node.js 22.5+ (it uses the built-in `node:sqlite`) and the Shopify CLI.
 
 1. **Create the app** in the Shopify Partner Dashboard, or run `shopify app config link`. Put the client id in
