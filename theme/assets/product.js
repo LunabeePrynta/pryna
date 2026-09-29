@@ -38,6 +38,26 @@
     root.querySelectorAll('[data-thumb]').forEach(function (btn) {
       btn.addEventListener('click', function () { showMedia(root, btn.getAttribute('data-thumb')); });
     });
+
+    var slides = Array.prototype.slice.call(root.querySelectorAll('.pdp__slide[data-media-id]'));
+    root.querySelectorAll('[data-step]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var i = slides.findIndex(function (el) { return el.classList.contains('is-active'); });
+        var next = slides[(i + parseInt(btn.getAttribute('data-step'), 10) + slides.length) % slides.length];
+        showMedia(root, next.getAttribute('data-media-id'));
+      });
+    });
+
+    var zoom = root.querySelector('[data-zoom]');
+    var box = root.querySelector('[data-lightbox]');
+    if (zoom && box && typeof box.showModal === 'function') {
+      zoom.addEventListener('click', function () {
+        var active = root.querySelector('.pdp__slide.is-active');
+        if (!active || !active.getAttribute('data-zoom-src')) return;
+        box.querySelector('[data-lightbox-img]').src = active.getAttribute('data-zoom-src');
+        box.showModal();
+      });
+    }
   }
 
   /* ── Variants ── */
@@ -52,7 +72,8 @@
     var price = root.querySelector('[data-price]');
     var compare = root.querySelector('[data-compare]');
     var badge = root.querySelector('[data-badge]');
-    var stock = root.querySelector('[data-stock]');
+    var stockBadge = root.querySelector('[data-stock-badge]');
+    var low = root.querySelector('[data-low]');
     var sku = root.querySelector('[data-sku]');
     var skuRow = root.querySelector('[data-sku-row]');
 
@@ -113,9 +134,19 @@
         if (onSale) badge.textContent = '-' + Math.floor((v.compare - v.price) * 100 / v.compare) + '%';
       }
 
-      if (stock) {
-        var text = !v.available ? 'Sold out' : (v.qty && v.qty > 0 ? v.qty + ' in stock' : 'In stock');
-        stock.innerHTML = '<span class="pdp__dot' + (v.available ? '' : ' is-out') + '"></span> ' + text;
+      if (stockBadge) {
+        stockBadge.textContent = v.available ? 'In stock' : 'Sold out';
+        stockBadge.classList.toggle('is-in', v.available);
+        stockBadge.classList.toggle('is-out', !v.available);
+      }
+      if (low) {
+        var limit = parseInt(low.getAttribute('data-threshold'), 10) || 10;
+        var showLow = v.available && v.qty !== null && v.qty > 0 && v.qty <= limit;
+        low.hidden = !showLow;
+        if (showLow) {
+          low.querySelector('[data-low-qty]').textContent = v.qty;
+          low.querySelector('[data-low-bar]').style.width = Math.round(v.qty * 100 / limit) + '%';
+        }
       }
       if (sku) {
         sku.textContent = v.sku || '';
@@ -161,19 +192,13 @@
 
   /* ── Share ── */
   function initShare(root) {
-    var btn = root.querySelector('[data-share]');
-    if (!btn) return;
-    var label = btn.querySelector('[data-share-label]');
+    var btn = root.querySelector('[data-copy]');
+    if (!btn || !navigator.clipboard) return;
     btn.addEventListener('click', function () {
-      var url = btn.getAttribute('data-url');
-      if (navigator.share) {
-        navigator.share({ title: btn.getAttribute('data-title'), url: url }).catch(function () {});
-      } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(function () {
-          label.textContent = 'Link copied';
-          setTimeout(function () { label.textContent = 'Share'; }, 2000);
-        });
-      }
+      navigator.clipboard.writeText(btn.getAttribute('data-copy')).then(function () {
+        btn.classList.add('is-done');
+        setTimeout(function () { btn.classList.remove('is-done'); }, 1600);
+      });
     });
   }
 

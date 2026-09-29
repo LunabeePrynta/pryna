@@ -15,8 +15,13 @@
 <section class="pdt" data-tabs>
   <div class="wrap">
     <div class="pdt__tabs" role="tablist">
-      <button type="button" role="tab" id="tab-desc-{{ section.id }}" aria-controls="panel-desc-{{ section.id }}" aria-selected="true">Description</button>
-      <button type="button" role="tab" id="tab-info-{{ section.id }}" aria-controls="panel-info-{{ section.id }}" aria-selected="false" tabindex="-1">Additional information</button>
+      <button type="button" role="tab" id="tab-desc-{{ section.id }}" aria-controls="panel-desc-{{ section.id }}" aria-selected="true">{{ section.settings.desc_label }}</button>
+      <button type="button" role="tab" id="tab-info-{{ section.id }}" aria-controls="panel-info-{{ section.id }}" aria-selected="false" tabindex="-1">{{ section.settings.info_label }}</button>
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'tab' -%}
+          <button type="button" role="tab" id="tab-{{ block.id }}" aria-controls="panel-{{ block.id }}" aria-selected="false" tabindex="-1" {{ block.shopify_attributes }}>{{ block.settings.title }}</button>
+        {%- endif -%}
+      {%- endfor -%}
       {%- if section.settings.show_reviews -%}
         <button type="button" role="tab" id="tab-rev-{{ section.id }}" aria-controls="panel-rev-{{ section.id }}" aria-selected="false" tabindex="-1">Reviews ({{ review_count }})</button>
       {%- endif -%}
@@ -26,6 +31,9 @@
     <div class="pdt__panel" role="tabpanel" id="panel-desc-{{ section.id }}" aria-labelledby="tab-desc-{{ section.id }}">
       <div class="pdt__desc{% if detail != blank %} has-image{% endif %}">
         <div class="pdt__copy">
+          {%- if product.description != blank -%}
+            <div class="prose-lyra pdt__rich">{{ product.description }}</div>
+          {%- endif -%}
           {%- if has_structured -%}
             {%- if specs != blank -%}
               <h3>Specifications</h3>
@@ -62,8 +70,6 @@
               <h3>Wearing</h3>
               <p>{{ wearing | newline_to_br }}</p>
             {%- endif -%}
-          {%- else -%}
-            <div class="prose-lyra">{{ product.description }}</div>
           {%- endif -%}
         </div>
         {%- if detail != blank -%}
@@ -92,11 +98,27 @@
       </table>
     </div>
 
+    {%- comment -%} ── Custom tabs ── {%- endcomment -%}
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'tab' -%}
+        <div class="pdt__panel" role="tabpanel" id="panel-{{ block.id }}" aria-labelledby="tab-{{ block.id }}" hidden>
+          <div class="pdt__copy prose-lyra">
+            {%- if block.settings.page != blank -%}
+              {{ block.settings.page.content }}
+            {%- else -%}
+              {{ block.settings.content }}
+            {%- endif -%}
+          </div>
+        </div>
+      {%- endif -%}
+    {%- endfor -%}
+
     {%- comment -%} ── Reviews ── {%- endcomment -%}
     {%- if section.settings.show_reviews -%}
       <div class="pdt__panel" role="tabpanel" id="panel-rev-{{ section.id }}" aria-labelledby="tab-rev-{{ section.id }}" hidden>
-        {%- if section.blocks.size > 0 -%}
-          {%- for block in section.blocks -%}
+        {%- assign app_blocks = section.blocks | where: 'type', '@app' -%}
+        {%- if app_blocks.size > 0 -%}
+          {%- for block in app_blocks -%}
             <div {{ block.shopify_attributes }}>{% render block %}</div>
           {%- endfor -%}
         {%- else -%}
@@ -109,23 +131,31 @@
 
 {% stylesheet %}
   .pdt { padding-block: 1rem 4rem; }
-  .pdt__tabs { display: flex; gap: 2.25rem; border-bottom: 1px solid rgb(74 36 41 / .14); overflow-x: auto; scrollbar-width: none; }
+  .pdt__tabs { display: flex; padding-inline: 1.25rem; border-bottom: 1px solid rgb(74 36 41 / .16); overflow-x: auto; scrollbar-width: none; }
   .pdt__tabs::-webkit-scrollbar { display: none; }
   .pdt__tabs button {
-    position: relative; flex: 0 0 auto; padding-block: 1rem; font-size: 16px; font-weight: 500;
-    color: var(--color-ink); opacity: .55; cursor: pointer; transition: opacity .25s ease;
+    flex: 0 0 auto; margin-bottom: -1px; padding: .9rem 1.35rem; border: 1px solid transparent; border-bottom: 0;
+    font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--color-ink); opacity: .6; cursor: pointer; transition: opacity .25s ease, color .25s ease;
   }
-  .pdt__tabs button::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--color-plum); transform: scaleX(0); transition: transform .35s ease; }
-  .pdt__tabs button[aria-selected="true"] { opacity: 1; color: var(--color-plum); }
-  .pdt__tabs button[aria-selected="true"]::after { transform: scaleX(1); }
+  .pdt__tabs button:hover { opacity: 1; }
+  .pdt__tabs button[aria-selected="true"] {
+    opacity: 1; color: var(--color-plum); background: var(--color-paper);
+    border-color: rgb(74 36 41 / .16);
+  }
   .pdt__panel { padding-top: 2.5rem; }
   .pdt__panel[hidden] { display: none; }
 
   .pdt__desc { display: grid; gap: 2.5rem; align-items: center; }
   @media (min-width: 1024px) { .pdt__desc.has-image { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 5rem; } }
-  .pdt__copy { max-width: 46rem; font-size: 15px; line-height: 1.75; color: var(--color-ink); }
+  .pdt__copy { max-width: 72rem; font-size: 15px; line-height: 1.75; color: var(--color-ink); }
   .pdt__copy h3 { font-family: var(--font-sans); font-size: 16px; font-weight: 500; color: var(--color-plum); margin-top: 1.75rem; margin-bottom: .5rem; }
   .pdt__copy h3:first-child { margin-top: 0; }
+  .pdt__rich + h3 { margin-top: 2rem; }
+  .pdt__rich h1, .pdt__rich h2, .pdt__rich h3, .pdt__rich h4 { font-family: var(--font-sans); font-size: 18px; font-weight: 500; line-height: 1.4; color: var(--color-plum); margin: 1.75rem 0 .75rem; }
+  .pdt__rich > :first-child { margin-top: 0; }
+  .pdt__rich img { max-width: 100%; height: auto; }
+  .pdt__rich a { text-decoration: underline; text-underline-offset: 3px; }
   .pdt__care { display: grid; gap: .6rem; }
   .pdt__care li { display: flex; align-items: center; gap: .75rem; }
   .pdt__care svg { width: 24px; height: 24px; flex: 0 0 auto; fill: none; stroke: var(--color-plum); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
@@ -144,10 +174,23 @@
   "name": "Product tabs",
   "enabled_on": { "templates": ["product"] },
   "settings": [
+    { "type": "text", "id": "desc_label", "label": "First tab label", "default": "Product information" },
+    { "type": "text", "id": "info_label", "label": "Second tab label", "default": "Additional" },
     { "type": "checkbox", "id": "show_reviews", "label": "Show Reviews tab", "default": true },
-    { "type": "paragraph", "content": "Description reads the product metafields custom.specifications, custom.material, custom.care_instructions, custom.wearing and custom.detail_image. When none are filled in, the product description is shown instead." }
+    { "type": "paragraph", "content": "The first tab shows the product description, followed by the metafields custom.specifications, custom.material, custom.care_instructions and custom.wearing when filled in. custom.detail_image appears beside them." }
   ],
-  "blocks": [{ "type": "@app" }],
+  "blocks": [
+    {
+      "type": "tab",
+      "name": "Custom tab",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Custom tab" },
+        { "type": "richtext", "id": "content", "label": "Content", "default": "<p>Use custom tabs for gifting notes, fabric stories or anything shared by every product.</p>" },
+        { "type": "page", "id": "page", "label": "Or show a page", "info": "Replaces the content above when chosen." }
+      ]
+    },
+    { "type": "@app" }
+  ],
   "presets": [{ "name": "Product tabs" }]
 }
 {% endschema %}

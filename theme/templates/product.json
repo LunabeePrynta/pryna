@@ -3,16 +3,54 @@
     "main": {
       "type": "main-product",
       "blocks": {
-        "trust_ship": { "type": "trust", "settings": { "icon": "truck", "label": "Free delivery over ₹2,999" } },
-        "trust_return": { "type": "trust", "settings": { "icon": "return", "label": "7-day easy returns" } },
-        "trust_cotton": { "type": "trust", "settings": { "icon": "leaf", "label": "Soft, breathable fabrics" } }
+        "perk_ship": {
+          "type": "perk",
+          "settings": {
+            "icon": "truck",
+            "text": "Free shipping on orders over ₹2,999 — dispatched the next business day."
+          }
+        },
+        "perk_return": {
+          "type": "perk",
+          "settings": {
+            "icon": "return",
+            "text": "Easy 7-day returns and exchanges on unworn pieces."
+          }
+        },
+        "perk_fabric": {
+          "type": "perk",
+          "settings": {
+            "icon": "leaf",
+            "text": "Soft, breathable fabrics that are gentle on little skin."
+          }
+        }
       },
-      "block_order": ["trust_ship", "trust_return", "trust_cotton"],
+      "block_order": [
+        "perk_ship",
+        "perk_return",
+        "perk_fabric"
+      ],
       "settings": {}
     },
     "details": {
       "type": "product-details",
-      "settings": { "show_reviews": true }
+      "blocks": {
+        "tab_ship": {
+          "type": "tab",
+          "settings": {
+            "title": "Shipping & returns",
+            "content": "<p>Orders are dispatched within 1–2 business days and usually arrive in 3–7 business days across India. Shipping is free on orders over ₹2,999.</p><p>Unworn pieces with tags attached can be returned or exchanged within 7 days of delivery.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "tab_ship"
+      ],
+      "settings": {
+        "desc_label": "Product information",
+        "info_label": "Additional",
+        "show_reviews": true
+      }
     },
     "faq": {
       "type": "product-faq",
@@ -46,7 +84,12 @@
           }
         }
       },
-      "block_order": ["q1", "q2", "q3", "q4"],
+      "block_order": [
+        "q1",
+        "q2",
+        "q3",
+        "q4"
+      ],
       "settings": {
         "eyebrow": "Good to know",
         "heading": "Frequently asked questions",
@@ -54,5 +97,9 @@
       }
     }
   },
-  "order": ["main", "details", "faq"]
+  "order": [
+    "main",
+    "details",
+    "faq"
+  ]
 }

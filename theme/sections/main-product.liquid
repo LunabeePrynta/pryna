@@ -1,244 +1,306 @@
 {%- liquid
   assign current = product.selected_or_first_available_variant
   assign featured = current.featured_media | default: product.featured_media
-  assign rating = product.metafields.reviews.rating.value
-  assign rating_count = product.metafields.reviews.rating_count.value | default: 0
   assign s = section.settings
+  assign share_url = shop.url | append: product.url | url_encode
+  assign share_title = product.title | url_encode
+
+  assign badge_tag = blank
+  for tag in product.tags
+    assign t = tag | downcase
+    if t contains 'badge:'
+      assign badge_tag = tag | split: ':' | last | strip
+      break
+    endif
+  endfor
+
+  assign low_qty = 0
+  if current.inventory_management == 'shopify' and current.inventory_policy == 'deny' and current.inventory_quantity > 0 and current.inventory_quantity <= s.low_stock_threshold
+    assign low_qty = current.inventory_quantity
+  endif
 -%}
 
 <section class="pdp" data-pdp data-section="{{ section.id }}">
-  <div class="wrap pdp__grid">
+  <div class="wrap">
+    <nav class="pdp__crumbs" aria-label="Breadcrumb">
+      <a href="{{ routes.root_url }}">Home</a>
+      <span aria-hidden="true">/</span>
+      {%- if collection -%}
+        <a href="{{ collection.url }}">{{ collection.title }}</a>
+        <span aria-hidden="true">/</span>
+      {%- endif -%}
+      <span aria-current="page">{{ product.title }}</span>
+    </nav>
 
-    {%- comment -%} ── Gallery ── {%- endcomment -%}
-    <div class="pdp__gallery">
-      <div class="pdp__stage">
-        {%- if product.media.size > 0 -%}
-          {%- for media in product.media -%}
-            <div
-              class="pdp__slide{% if media.id == featured.id %} is-active{% endif %}"
-              data-media-id="{{ media.id }}"
-            >
-              {% render 'media', image: media.preview_image, ratio: '4/5', eager: forloop.first, sizes: '(min-width: 1024px) 50vw, 100vw' %}
-            </div>
-          {%- endfor -%}
-        {%- else -%}
-          <div class="pdp__slide is-active">
-            {% render 'media', label: product.title, ratio: '4/5', eager: true %}
-          </div>
-        {%- endif -%}
+    <div class="pdp__grid">
 
-        <span class="pdp__badge" data-badge {% unless current.compare_at_price > current.price %}hidden{% endunless %}>
-          {%- if current.compare_at_price > current.price -%}
-            -{{ current.compare_at_price | minus: current.price | times: 100 | divided_by: current.compare_at_price | floor }}%
-          {%- endif -%}
-        </span>
-      </div>
-
-      {%- if product.media.size > 1 -%}
-        <div class="pdp__thumbs" role="tablist" aria-label="Product images">
-          {%- for media in product.media -%}
-            <button
-              type="button"
-              class="pdp__thumb{% if media.id == featured.id %} is-active{% endif %}"
-              data-thumb="{{ media.id }}"
-              aria-label="Show image {{ forloop.index }}"
-            >
-              <img
-                src="{{ media.preview_image | image_url: width: 240 }}"
-                alt=""
-                width="120"
-                height="150"
-                loading="lazy"
+      {%- comment -%} ── Gallery ── {%- endcomment -%}
+      <div class="pdp__gallery{% if product.media.size > 1 %} has-thumbs{% endif %}">
+        {%- if product.media.size > 1 -%}
+          <div class="pdp__thumbs" aria-label="Product images">
+            {%- for media in product.media -%}
+              <button
+                type="button"
+                class="pdp__thumb{% if media.id == featured.id %} is-active{% endif %}"
+                data-thumb="{{ media.id }}"
+                aria-label="Show image {{ forloop.index }}"
               >
-            </button>
-          {%- endfor -%}
-        </div>
-      {%- endif -%}
-    </div>
-
-    {%- comment -%} ── Buy box ── {%- endcomment -%}
-    <div class="pdp__info">
-      <h1 class="product-name pdp__title">{{ product.title }}</h1>
-
-      <div class="pdp__rating">
-        {%- assign stars = rating.rating | default: 0 | round -%}
-        <span class="pdp__stars" aria-hidden="true">
-          {%- for i in (1..5) -%}
-            <svg viewBox="0 0 20 20" class="{% if i <= stars %}is-on{% endif %}"><path d="M10 1.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L10 14.9l-5.2 2.8 1-5.9L1.5 7.7l5.9-.8z"/></svg>
-          {%- endfor -%}
-        </span>
-        <span class="pdp__rating-text">
-          {%- if rating_count > 0 -%}
-            {{ rating_count }} {{ rating_count | pluralize: 'review', 'reviews' }}
-          {%- else -%}
-            No reviews
-          {%- endif -%}
-        </span>
-      </div>
-
-      <div class="pdp__price">
-        <span class="pdp__price-now" data-price>{{ current.price | money }}</span>
-        <s class="pdp__price-was" data-compare {% unless current.compare_at_price > current.price %}hidden{% endunless %}>
-          {{- current.compare_at_price | money -}}
-        </s>
-      </div>
-      {%- if s.price_note != blank -%}
-        <p class="pdp__note">{{ s.price_note }}</p>
-      {%- endif -%}
-
-      <p class="pdp__stock" data-stock>
-        {%- if current.available -%}
-          <span class="pdp__dot"></span>
-          {%- if current.inventory_management == 'shopify' and current.inventory_policy == 'deny' and current.inventory_quantity > 0 -%}
-            {{ current.inventory_quantity }} in stock
-          {%- else -%}
-            In stock
-          {%- endif -%}
-        {%- else -%}
-          <span class="pdp__dot is-out"></span> Sold out
-        {%- endif -%}
-      </p>
-
-      <hr class="pdp__rule">
-
-      {%- assign blurb = product.metafields.custom.short_description.value | default: product.description | strip_html | truncatewords: s.excerpt_words -%}
-      {%- if blurb != blank -%}
-        <p class="pdp__excerpt">{{ blurb }}</p>
-      {%- endif -%}
-
-      {%- form 'product', product, class: 'pdp__form', data-product-form: '', novalidate: 'novalidate' -%}
-        {%- unless product.has_only_default_variant -%}
-          {%- for option in product.options_with_values -%}
-            {%- liquid
-              assign oname = option.name | downcase
-              assign is_color = false
-              if oname contains 'colo'
-                assign is_color = true
-              endif
-            -%}
-            <fieldset class="pdp__opt" data-option="{{ forloop.index0 }}">
-              <legend class="pdp__opt-label">
-                {{ option.name }}: <span data-opt-value>{{ option.selected_value }}</span>
-              </legend>
-              <div class="pdp__opt-values{% if is_color %} is-swatch{% endif %}">
-                {%- for value in option.values -%}
-                  <label class="{% if is_color %}pdp__swatch{% else %}pdp__chip{% endif %}" title="{{ value | escape }}">
-                    <input
-                      type="radio"
-                      name="option-{{ option.position }}"
-                      value="{{ value | escape }}"
-                      {% if option.selected_value == value %}checked{% endif %}
-                      class="sr-only"
-                    >
-                    {%- if is_color -%}
-                      {%- liquid
-                        assign css_names = ',black,white,red,pink,hotpink,maroon,orange,coral,peach,yellow,gold,mustard,beige,ivory,cream,khaki,olive,green,mint,teal,turquoise,aqua,blue,navy,skyblue,lavender,lilac,purple,violet,plum,magenta,fuchsia,brown,tan,chocolate,grey,gray,silver,salmon,crimson,wheat,linen,'
-                        assign swatch_key = value | handle | replace: '-', ''
-                        assign swatch_probe = ',' | append: swatch_key | append: ','
-                        assign swatch_bg = 'var(--color-sand)'
-                        if css_names contains swatch_probe
-                          assign swatch_bg = swatch_key | replace: 'cream', '#FDF3CD' | replace: 'mustard', '#D9A62E' | replace: 'peach', '#F6C6A8' | replace: 'mint', '#BFE3CF' | replace: 'lilac', '#C8A2C8'
-                        endif
-                        if value.swatch.image
-                          assign swatch_bg = value.swatch.image | image_url: width: 80 | prepend: 'url(' | append: ') center/cover'
-                        elsif value.swatch.color
-                          assign swatch_bg = value.swatch.color
-                        endif
-                      -%}
-                      <span style="--sw: {{ swatch_bg }};"><span class="sr-only">{{ value }}</span></span>
-                    {%- else -%}
-                      <span>{{ value }}</span>
-                    {%- endif -%}
-                  </label>
-                {%- endfor -%}
-              </div>
-            </fieldset>
-          {%- endfor -%}
-        {%- endunless -%}
-
-        <select name="id" class="sr-only" aria-hidden="true" tabindex="-1" data-variant-select>
-          {%- for variant in product.variants -%}
-            <option value="{{ variant.id }}" {% if variant == current %}selected{% endif %}>{{ variant.title }}</option>
-          {%- endfor -%}
-        </select>
-
-        <div class="pdp__buy">
-          <div class="pdp__qty">
-            <button type="button" data-qty="-1" aria-label="Decrease quantity">&minus;</button>
-            <input type="number" name="quantity" value="1" min="1" inputmode="numeric" aria-label="Quantity">
-            <button type="button" data-qty="1" aria-label="Increase quantity">+</button>
+                <img src="{{ media.preview_image | image_url: width: 240 }}" alt="" width="120" height="150" loading="lazy">
+              </button>
+            {%- endfor -%}
           </div>
-          <button type="submit" name="add" class="pdp__add" data-add {% unless current.available %}disabled{% endunless %}>
-            {%- if current.available -%}{{ 'products.product.add_to_cart' | t }}{%- else -%}{{ 'products.product.sold_out' | t }}{%- endif -%}
-          </button>
+        {%- endif -%}
+
+        <div class="pdp__main">
+          <div class="pdp__stage">
+            {%- if product.media.size > 0 -%}
+              {%- for media in product.media -%}
+                <div
+                  class="pdp__slide{% if media.id == featured.id %} is-active{% endif %}"
+                  data-media-id="{{ media.id }}"
+                  data-zoom-src="{{ media.preview_image | image_url: width: 2000 }}"
+                >
+                  {% render 'media', image: media.preview_image, ratio: '4/5', eager: forloop.first, sizes: '(min-width: 1024px) 45vw, 100vw' %}
+                </div>
+              {%- endfor -%}
+            {%- else -%}
+              <div class="pdp__slide is-active">
+                {% render 'media', label: product.title, ratio: '4/5', eager: true %}
+              </div>
+            {%- endif -%}
+
+            {%- if product.media.size > 1 -%}
+              <button type="button" class="pdp__arrow is-prev" data-step="-1" aria-label="Previous image">
+                <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+              </button>
+              <button type="button" class="pdp__arrow is-next" data-step="1" aria-label="Next image">
+                <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+              </button>
+            {%- endif -%}
+          </div>
+
+          {%- if product.media.size > 0 -%}
+            <button type="button" class="pdp__zoom" data-zoom>
+              <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20 M10.5 8v5 M8 10.5h5"/></svg>
+              Zoom
+            </button>
+          {%- endif -%}
+        </div>
+      </div>
+
+      {%- comment -%} ── Buy box ── {%- endcomment -%}
+      <div class="pdp__info">
+        <div class="pdp__badges">
+          {%- if badge_tag != blank -%}<span class="pdp__tag is-hot">{{ badge_tag }}</span>{%- endif -%}
+          <span class="pdp__tag is-sale" data-badge {% unless current.compare_at_price > current.price %}hidden{% endunless %}>
+            {%- if current.compare_at_price > current.price -%}
+              -{{ current.compare_at_price | minus: current.price | times: 100 | divided_by: current.compare_at_price | floor }}%
+            {%- endif -%}
+          </span>
+          <span class="pdp__tag {% if current.available %}is-in{% else %}is-out{% endif %}" data-stock-badge>
+            {%- if current.available -%}In stock{%- else -%}Sold out{%- endif -%}
+          </span>
+        </div>
+
+        <h1 class="product-name pdp__title">{{ product.title }}</h1>
+
+        <dl class="pdp__ids">
+          <div {% if current.sku == blank %}hidden{% endif %} data-sku-row><dt>SKU:</dt><dd data-sku>{{ current.sku }}</dd></div>
+          {%- if s.show_vendor and product.vendor != blank -%}
+            <div><dt>Brand:</dt><dd>{{ product.vendor }}</dd></div>
+          {%- endif -%}
+          {%- if product.type != blank -%}
+            <div><dt>Category:</dt><dd>{{ product.type }}</dd></div>
+          {%- endif -%}
+        </dl>
+
+        <div class="pdp__price">
+          <span class="pdp__price-now" data-price>{{ current.price | money }}</span>
+          <s class="pdp__price-was" data-compare {% unless current.compare_at_price > current.price %}hidden{% endunless %}>
+            {{- current.compare_at_price | money -}}
+          </s>
+        </div>
+        {%- if s.price_note != blank -%}
+          <p class="pdp__note">{{ s.price_note }}</p>
+        {%- endif -%}
+
+        <div class="pdp__low" data-low data-threshold="{{ s.low_stock_threshold }}" {% if low_qty == 0 %}hidden{% endif %}>
+          <p>Hurry! Only <b data-low-qty>{{ low_qty }}</b> left in stock!</p>
+          <div class="pdp__bar"><span data-low-bar style="width: {{ low_qty | times: 100 | divided_by: s.low_stock_threshold }}%;"></span></div>
+        </div>
+
+        {%- if section.blocks.size > 0 -%}
+          <ul class="pdp__perks">
+            {%- for block in section.blocks -%}
+              <li {{ block.shopify_attributes }}>
+                {% render 'pdp-icon', name: block.settings.icon %}
+                <span>{{ block.settings.text }}</span>
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+        {%- form 'product', product, class: 'pdp__form', data-product-form: '', novalidate: 'novalidate' -%}
+          {%- unless product.has_only_default_variant -%}
+            {%- for option in product.options_with_values -%}
+              {%- liquid
+                assign oname = option.name | downcase
+                assign is_color = false
+                if oname contains 'colo'
+                  assign is_color = true
+                endif
+              -%}
+              <fieldset class="pdp__opt" data-option="{{ forloop.index0 }}">
+                <legend class="pdp__opt-label">
+                  {{ option.name }}: <span data-opt-value>{{ option.selected_value }}</span>
+                </legend>
+                <div class="pdp__opt-values{% if is_color %} is-swatch{% endif %}">
+                  {%- for value in option.values -%}
+                    <label class="{% if is_color %}pdp__swatch{% else %}pdp__chip{% endif %}" title="{{ value | escape }}">
+                      <input
+                        type="radio"
+                        name="option-{{ option.position }}"
+                        value="{{ value | escape }}"
+                        {% if option.selected_value == value %}checked{% endif %}
+                        class="sr-only"
+                      >
+                      {%- if is_color -%}
+                        {%- liquid
+                          assign css_names = ',black,white,red,pink,hotpink,maroon,orange,coral,peach,yellow,gold,mustard,beige,ivory,cream,khaki,olive,green,mint,teal,turquoise,aqua,blue,navy,skyblue,lavender,lilac,purple,violet,plum,magenta,fuchsia,brown,tan,chocolate,grey,gray,silver,salmon,crimson,wheat,linen,'
+                          assign swatch_key = value | handle | replace: '-', ''
+                          assign swatch_probe = ',' | append: swatch_key | append: ','
+                          assign swatch_bg = 'var(--color-sand)'
+                          if css_names contains swatch_probe
+                            assign swatch_bg = swatch_key | replace: 'cream', '#FDF3CD' | replace: 'mustard', '#D9A62E' | replace: 'peach', '#F6C6A8' | replace: 'mint', '#BFE3CF' | replace: 'lilac', '#C8A2C8'
+                          endif
+                          if value.swatch.image
+                            assign swatch_bg = value.swatch.image | image_url: width: 80 | prepend: 'url(' | append: ') center/cover'
+                          elsif value.swatch.color
+                            assign swatch_bg = value.swatch.color
+                          endif
+                        -%}
+                        <span style="--sw: {{ swatch_bg }};"><span class="sr-only">{{ value }}</span></span>
+                      {%- else -%}
+                        <span>{{ value }}</span>
+                      {%- endif -%}
+                    </label>
+                  {%- endfor -%}
+                </div>
+              </fieldset>
+            {%- endfor -%}
+          {%- endunless -%}
+
+          <select name="id" class="sr-only" aria-hidden="true" tabindex="-1" data-variant-select>
+            {%- for variant in product.variants -%}
+              <option value="{{ variant.id }}" {% if variant == current %}selected{% endif %}>{{ variant.title }}</option>
+            {%- endfor -%}
+          </select>
+
+          {%- comment -%} ── Links ── {%- endcomment -%}
+          <div class="pdp__links">
+            {%- if s.size_guide_page != blank -%}
+              <button type="button" data-dialog-open="size-{{ section.id }}">
+                <svg viewBox="0 0 24 24"><path d="M12 5a2 2 0 1 1 2 2c-1 0-2 .7-2 1.7V10 M12 10l-9 6.5c-.8.6-.4 1.5.5 1.5h17c.9 0 1.3-.9.5-1.5z"/></svg>
+                <span>Size guide</span>
+              </button>
+            {%- endif -%}
+            {%- if s.delivery_page != blank -%}
+              <button type="button" data-dialog-open="delivery-{{ section.id }}">
+                <svg viewBox="0 0 24 24"><path d="M3 5h2l2 10h11 M7 15V6h13v9 M9 19a1 1 0 1 0 0 .1 M17 19a1 1 0 1 0 0 .1"/></svg>
+                <span>Delivery &amp; return</span>
+              </button>
+            {%- endif -%}
+            {%- if s.show_ask -%}
+              <button type="button" data-dialog-open="ask-{{ section.id }}">
+                <svg viewBox="0 0 24 24"><path d="M4 6h16v10H8l-4 3z M8 10h8 M8 13h5"/></svg>
+                <span>Message</span>
+              </button>
+            {%- endif -%}
+          </div>
+
+          {%- if s.show_note -%}
+            <label class="pdp__notes">
+              <span>Notes</span>
+              <textarea name="properties[Note]" rows="3" placeholder="{{ s.note_placeholder | escape }}"></textarea>
+            </label>
+          {%- endif -%}
+
+          <div class="pdp__buy">
+            <div class="pdp__qty">
+              <button type="button" data-qty="-1" aria-label="Decrease quantity">&minus;</button>
+              <input type="number" name="quantity" value="1" min="1" inputmode="numeric" aria-label="Quantity">
+              <button type="button" data-qty="1" aria-label="Increase quantity">+</button>
+            </div>
+            <button type="submit" name="add" class="pdp__add" data-add {% unless current.available %}disabled{% endunless %}>
+              {%- if current.available -%}{{ 'products.product.add_to_cart' | t }}{%- else -%}{{ 'products.product.sold_out' | t }}{%- endif -%}
+            </button>
+          </div>
           {%- if s.show_dynamic_checkout -%}
             <div class="pdp__checkout">{{ form | payment_button }}</div>
           {%- endif -%}
-        </div>
-      {%- endform -%}
+        {%- endform -%}
 
-      {%- comment -%} ── Utility links ── {%- endcomment -%}
-      <div class="pdp__utils">
-        {%- if s.size_guide_page != blank -%}
-          <button type="button" data-dialog-open="size-{{ section.id }}">
-            <svg viewBox="0 0 24 24"><path d="M3 8h18v8H3z M7 8v3 M11 8v4 M15 8v3 M19 8v4"/></svg>
-            Size guide
-          </button>
+        {%- comment -%} ── Pickup ── {%- endcomment -%}
+        {%- assign pickup = current.store_availabilities | where: 'pick_up_enabled', true | first -%}
+        {%- if pickup -%}
+          <div class="pdp__pickup">
+            {%- if pickup.available -%}
+              <svg viewBox="0 0 24 24" class="is-ok"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+              <div>
+                <p>Pickup available at <b>{{ pickup.location.name }}</b></p>
+                <small>{{ pickup.pick_up_time }}</small>
+              </div>
+            {%- else -%}
+              <svg viewBox="0 0 24 24" class="is-no"><path d="M6 6l12 12 M18 6L6 18"/></svg>
+              <div><p>Pickup currently unavailable at <b>{{ pickup.location.name }}</b></p></div>
+            {%- endif -%}
+          </div>
         {%- endif -%}
-        {%- if s.show_ask -%}
-          <button type="button" data-dialog-open="ask-{{ section.id }}">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7 M12 17h.01"/></svg>
-            Ask a question
-          </button>
-        {%- endif -%}
-        <button type="button" data-share data-url="{{ shop.url }}{{ product.url }}" data-title="{{ product.title | escape }}">
-          <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4 M8.2 13.2l7.6 4.4"/></svg>
-          <span data-share-label>Share</span>
-        </button>
-      </div>
 
-      {%- comment -%} ── Meta rows ── {%- endcomment -%}
-      <dl class="pdp__meta">
-        {%- if s.delivery_text != blank -%}
-          <div><dt>Estimated delivery:</dt><dd>{{ s.delivery_text }}</dd></div>
-        {%- endif -%}
-        {%- if s.returns_text != blank -%}
-          <div><dt>Free shipping &amp; returns:</dt><dd>{{ s.returns_text }}</dd></div>
-        {%- endif -%}
-        <div {% if current.sku == blank %}hidden{% endif %} data-sku-row><dt>SKU:</dt><dd data-sku>{{ current.sku }}</dd></div>
-        {%- if product.type != blank -%}
-          <div><dt>Category:</dt><dd>{{ product.type }}</dd></div>
-        {%- endif -%}
-      </dl>
-
-      {%- if s.show_payment -%}
-        <div class="pdp__pay">
-          <p class="pdp__pay-title">Payment &amp; Security</p>
-          {%- if shop.enabled_payment_types.size > 0 -%}
+        {%- if s.show_payment and shop.enabled_payment_types.size > 0 -%}
+          <div class="pdp__pay">
+            <p class="pdp__label">Guaranteed safe checkout:</p>
             <div class="pdp__pay-icons">
-              {%- for type in shop.enabled_payment_types -%}{{ type | payment_type_svg_tag }}{%- endfor -%}
+              {%- for type in shop.enabled_payment_types -%}<span>{{ type | payment_type_svg_tag }}</span>{%- endfor -%}
             </div>
-          {%- endif -%}
-          {%- if s.payment_text != blank -%}
-            <p class="pdp__pay-text">{{ s.payment_text }}</p>
-          {%- endif -%}
-        </div>
-      {%- endif -%}
+          </div>
+        {%- endif -%}
 
-      {%- if section.blocks.size > 0 -%}
-        <ul class="pdp__trust">
-          {%- for block in section.blocks -%}
-            <li {{ block.shopify_attributes }}>
-              {% render 'pdp-icon', name: block.settings.icon %}
-              <span>{{ block.settings.label }}</span>
-            </li>
-          {%- endfor -%}
-        </ul>
-      {%- endif -%}
+        {%- if s.show_share -%}
+          <div class="pdp__share">
+            <p class="pdp__label">Share:</p>
+            <div class="pdp__share-row">
+              <a class="is-fb" href="https://www.facebook.com/sharer/sharer.php?u={{ share_url }}" target="_blank" rel="noopener" aria-label="Share on Facebook">
+                <svg viewBox="0 0 24 24"><path d="M13.5 21v-7.5H16l.5-3h-3V8.6c0-.9.3-1.6 1.6-1.6h1.6V4.3c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.3H7.5v3H10V21z"/></svg>
+              </a>
+              <a class="is-x" href="https://twitter.com/intent/tweet?url={{ share_url }}&text={{ share_title }}" target="_blank" rel="noopener" aria-label="Share on X">
+                <svg viewBox="0 0 24 24"><path d="M17.8 3h3.1l-6.8 7.8 8 10.2h-6.3l-4.9-6.4L5.3 21H2.2l7.3-8.3L1.9 3h6.4l4.4 5.9zm-1.1 16.2h1.7L7.4 4.7H5.6z"/></svg>
+              </a>
+              <a class="is-pin" href="https://pinterest.com/pin/create/button/?url={{ share_url }}&description={{ share_title }}{% if product.featured_image %}&media={{ product.featured_image | image_url: width: 1200 | prepend: 'https:' | url_encode }}{% endif %}" target="_blank" rel="noopener" aria-label="Pin on Pinterest">
+                <svg viewBox="0 0 24 24"><path d="M12.2 2.5c-5.3 0-8 3.8-8 7 0 1.9.7 3.6 2.3 4.3.3.1.5 0 .6-.3l.2-.9c.1-.3 0-.4-.2-.7-.5-.6-.8-1.3-.8-2.4 0-3.1 2.3-5.8 6-5.8 3.3 0 5.1 2 5.1 4.7 0 3.5-1.6 6.5-3.9 6.5-1.3 0-2.2-1-1.9-2.3.4-1.5 1.1-3.2 1.1-4.3 0-1-.5-1.8-1.6-1.8-1.3 0-2.3 1.3-2.3 3.1 0 1.1.4 1.9.4 1.9l-1.5 6.4c-.4 1.9-.1 4.2 0 4.4 0 .1.2.2.3.1.1-.1 1.5-1.9 2-3.6l.8-3c.4.7 1.5 1.4 2.7 1.4 3.6 0 6-3.3 6-7.6 0-3.3-2.8-6.3-7-6.3z"/></svg>
+              </a>
+              <a class="is-wa" href="https://wa.me/?text={{ share_title }}%20{{ share_url }}" target="_blank" rel="noopener" aria-label="Share on WhatsApp">
+                <svg viewBox="0 0 24 24"><path d="M12 2.5a9.4 9.4 0 0 0-8.1 14.2L2.5 21.5l4.9-1.3A9.4 9.4 0 1 0 12 2.5zm0 17.2c-1.4 0-2.8-.4-4-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A7.8 7.8 0 1 1 12 19.7zm4.3-5.8c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.4 6.4 0 0 1-3.2-2.8c-.2-.4.2-.4.7-1.2.1-.1 0-.3 0-.4l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.3 1 2.5c.1.2 1.6 2.5 4 3.5 1.5.6 2 .7 2.8.6.4-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1l-.6-.4z"/></svg>
+              </a>
+              <a class="is-mail" href="mailto:?subject={{ share_title }}&body={{ share_url }}" aria-label="Share by email">
+                <svg viewBox="0 0 24 24"><path d="M3.5 6h17v12h-17z M3.5 6.5l8.5 7 8.5-7" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+              </a>
+              <button type="button" class="is-copy" data-copy="{{ shop.url }}{{ product.url }}" aria-label="Copy link">
+                <svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+          </div>
+        {%- endif -%}
+      </div>
     </div>
   </div>
 
   {%- comment -%} ── Dialogs ── {%- endcomment -%}
+  <dialog class="pdp__dialog pdp__lightbox" data-lightbox>
+    <button type="button" class="pdp__lightbox-close" data-dialog-close aria-label="Close">&times;</button>
+    <img src="" alt="{{ product.title | escape }}" data-lightbox-img>
+  </dialog>
+
   {%- if s.size_guide_page != blank -%}
     <dialog class="pdp__dialog" id="size-{{ section.id }}">
       <div class="pdp__dialog-head">
@@ -246,6 +308,16 @@
         <button type="button" data-dialog-close aria-label="Close">&times;</button>
       </div>
       <div class="pdp__dialog-body prose-lyra">{{ s.size_guide_page.content }}</div>
+    </dialog>
+  {%- endif -%}
+
+  {%- if s.delivery_page != blank -%}
+    <dialog class="pdp__dialog" id="delivery-{{ section.id }}">
+      <div class="pdp__dialog-head">
+        <p>{{ s.delivery_page.title }}</p>
+        <button type="button" data-dialog-close aria-label="Close">&times;</button>
+      </div>
+      <div class="pdp__dialog-body prose-lyra">{{ s.delivery_page.content }}</div>
     </dialog>
   {%- endif -%}
 
@@ -304,123 +376,161 @@
 <script src="{{ 'product.js' | asset_url }}" defer></script>
 
 {% stylesheet %}
-  .pdp { padding-block: 2.5rem 4rem; }
+  .pdp { padding-block: 1.25rem 4rem; }
+  .pdp__crumbs { display: flex; flex-wrap: wrap; gap: .45rem; font-size: 12px; color: var(--color-ink); margin-bottom: 1.5rem; }
+  .pdp__crumbs a { color: var(--color-plum); opacity: .7; }
+  .pdp__crumbs a:hover { opacity: 1; }
+  .pdp__crumbs span { opacity: .6; }
   .pdp__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; align-items: start; }
   @media (min-width: 1024px) {
-    .pdp { padding-block: 3.5rem 5rem; }
-    .pdp__grid { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 4.5rem; }
+    .pdp__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3.5rem; }
     .pdp__gallery { position: sticky; top: 7rem; }
   }
 
   /* Gallery ---- */
+  .pdp__gallery { display: grid; gap: .9rem; }
+  .pdp__main { min-width: 0; }
   .pdp__stage { position: relative; background: var(--color-sand); }
   .pdp__slide { display: none; }
   .pdp__slide.is-active { display: block; animation: pdp-fade .45s ease; }
   @keyframes pdp-fade { from { opacity: 0; } to { opacity: 1; } }
-  .pdp__badge {
-    position: absolute; top: 1rem; left: 1rem;
-    background: var(--color-amber); color: var(--color-cream);
-    font-size: 12px; font-weight: 500; letter-spacing: .06em;
-    padding: .35rem .65rem; border-radius: 999px;
+  .pdp__arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); display: grid; place-items: center;
+    width: 2.5rem; height: 2.5rem; border-radius: 50%; background: rgb(250 245 236 / .85); color: var(--color-plum);
+    cursor: pointer; opacity: 0; transition: opacity .3s ease, background .3s ease;
   }
-  .pdp__badge[hidden] { display: none; }
-  .pdp__thumbs { display: flex; gap: .75rem; margin-top: .9rem; overflow-x: auto; scrollbar-width: none; }
+  .pdp__arrow.is-prev { left: .9rem; }
+  .pdp__arrow.is-next { right: .9rem; }
+  .pdp__arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+  .pdp__arrow:hover { background: var(--color-paper); }
+  .pdp__stage:hover .pdp__arrow, .pdp__arrow:focus-visible { opacity: 1; }
+  @media (hover: none) { .pdp__arrow { opacity: 1; } }
+  .pdp__zoom { display: flex; align-items: center; gap: .35rem; margin: .6rem 0 0 auto; font-size: 12px; color: var(--color-ink); cursor: zoom-in; }
+  .pdp__zoom svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.4; }
+  .pdp__thumbs { display: flex; gap: .75rem; overflow-x: auto; scrollbar-width: none; order: 2; }
   .pdp__thumbs::-webkit-scrollbar { display: none; }
   .pdp__thumb {
-    flex: 0 0 5.5rem; aspect-ratio: 4/5; padding: 0; background: var(--color-sand);
-    border: 1px solid transparent; opacity: .6; transition: opacity .3s, border-color .3s; cursor: pointer;
+    flex: 0 0 4.75rem; aspect-ratio: 4/5; padding: 0; background: var(--color-sand);
+    border: 1px solid transparent; opacity: .65; transition: opacity .3s, border-color .3s; cursor: pointer;
   }
   .pdp__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pdp__thumb:hover, .pdp__thumb.is-active { opacity: 1; border-color: var(--color-plum); }
+  @media (min-width: 768px) {
+    .pdp__gallery.has-thumbs { grid-template-columns: 5.25rem minmax(0, 1fr); gap: 1rem; }
+    .pdp__thumbs { order: 0; flex-direction: column; overflow-y: auto; height: 0; min-height: 100%; }
+    .pdp__thumb { flex-basis: auto; }
+  }
 
   /* Buy box ---- */
-  .pdp__title { font-size: 28px; line-height: 1.2; font-weight: 500; color: var(--color-plum); }
-  @media (min-width: 768px) { .pdp__title { font-size: 32px; } }
-  .pdp__rating { display: flex; align-items: center; gap: .6rem; margin-top: .75rem; font-size: 13px; color: var(--color-ink); }
-  .pdp__stars { display: inline-flex; gap: 2px; }
-  .pdp__stars svg { width: 15px; height: 15px; fill: none; stroke: var(--color-gold); stroke-width: 1.3; }
-  .pdp__stars svg.is-on { fill: var(--color-gold); }
+  .pdp__badges { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .9rem; }
+  .pdp__tag { padding: .2rem .55rem; font-size: 12px; font-weight: 500; letter-spacing: .04em; color: #fff; }
+  .pdp__tag[hidden] { display: none; }
+  .pdp__tag.is-hot { background: #e2703a; text-transform: capitalize; }
+  .pdp__tag.is-sale { background: var(--color-amber); }
+  .pdp__tag.is-in { background: #2f8f6b; }
+  .pdp__tag.is-out { background: #a23a2c; }
+  .pdp__title { font-size: 26px; line-height: 1.25; font-weight: 500; color: var(--color-plum); }
+  @media (min-width: 768px) { .pdp__title { font-size: 30px; } }
+  .pdp__ids { margin-top: 1rem; display: grid; gap: .3rem; font-size: 13px; }
+  .pdp__ids > div { display: flex; gap: .35rem; }
+  .pdp__ids > div[hidden] { display: none; }
+  .pdp__ids dt { text-transform: uppercase; letter-spacing: .06em; color: var(--color-ink); opacity: .6; }
+  .pdp__ids dd { color: var(--color-plum); }
   .pdp__price { display: flex; align-items: baseline; gap: .75rem; margin-top: 1.25rem; }
-  .pdp__price-now { font-size: 26px; font-weight: 500; color: var(--color-plum); }
-  .pdp__price-was { font-size: 18px; color: var(--color-ink); opacity: .55; }
+  .pdp__price-now { font-size: 24px; font-weight: 500; color: var(--color-plum); }
+  .pdp__price-was { font-size: 17px; color: var(--color-ink); opacity: .55; }
   .pdp__price-was[hidden] { display: none; }
-  .pdp__note { margin-top: .35rem; font-size: 13px; color: var(--color-ink); opacity: .7; }
-  .pdp__stock { display: flex; align-items: center; gap: .5rem; margin-top: .9rem; font-size: 14px; color: #2f7d4a; }
-  .pdp__dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px rgb(47 125 74 / .18); }
-  .pdp__stock:has(.is-out) { color: #a23a2c; }
-  .pdp__dot.is-out { box-shadow: 0 0 0 3px rgb(162 58 44 / .18); }
-  .pdp__rule { border: 0; border-top: 1px solid rgb(74 36 41 / .14); margin-block: 1.5rem; }
-  .pdp__excerpt { font-size: 15px; line-height: 1.7; color: var(--color-ink); }
+  .pdp__note { margin-top: .3rem; font-size: 12px; color: var(--color-ink); opacity: .7; }
 
-  .pdp__form { margin-top: 1.75rem; display: grid; gap: 1.5rem; }
+  .pdp__low { margin-top: 1.25rem; font-size: 15px; color: var(--color-plum); }
+  .pdp__low[hidden] { display: none; }
+  .pdp__low b { color: #c0392b; font-weight: 500; }
+  .pdp__bar { margin-top: .6rem; height: 6px; border-radius: 99px; background: rgb(74 36 41 / .12); overflow: hidden; }
+  .pdp__bar span { display: block; height: 100%; min-width: 6%; border-radius: inherit; background: var(--color-plum); transition: width .5s ease; }
+
+  .pdp__perks {
+    display: grid; gap: .85rem; margin-top: 1.5rem; padding-block: 1.4rem;
+    border-block: 1px dashed rgb(74 36 41 / .2); font-size: 14px; color: var(--color-ink);
+  }
+  .pdp__perks li { display: flex; align-items: center; gap: .8rem; }
+  .pdp__perks svg { width: 22px; height: 22px; flex: 0 0 auto; fill: none; stroke: var(--color-plum); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+
+  .pdp__form { margin-top: 1.5rem; display: grid; gap: 1.4rem; }
   .pdp__opt { border: 0; padding: 0; margin: 0; }
-  .pdp__opt-label { font-size: 14px; font-weight: 500; color: var(--color-plum); margin-bottom: .75rem; padding: 0; }
-  .pdp__opt-label span { font-weight: 400; color: var(--color-ink); }
-  .pdp__opt-values { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .pdp__opt-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-ink); opacity: .75; margin-bottom: .7rem; padding: 0; }
+  .pdp__opt-label span { color: var(--color-plum); opacity: 1; }
+  .pdp__opt-values { display: flex; flex-wrap: wrap; gap: .55rem; }
   .pdp__chip span {
-    display: inline-grid; place-items: center; min-width: 3rem; height: 2.75rem; padding-inline: 1rem;
-    border: 1px solid rgb(74 36 41 / .25); font-size: 14px; color: var(--color-plum);
-    cursor: pointer; transition: all .25s ease;
+    display: inline-grid; place-items: center; min-width: 2.75rem; height: 2.4rem; padding-inline: .85rem;
+    border: 1px solid rgb(74 36 41 / .2); font-size: 13px; color: var(--color-plum);
+    cursor: pointer; transition: border-color .25s ease, background .25s ease;
   }
   .pdp__chip:hover span { border-color: var(--color-plum); }
-  .pdp__chip input:checked + span { background: var(--color-plum); border-color: var(--color-plum); color: var(--color-cream); }
+  .pdp__chip input:checked + span { border-color: var(--color-plum); box-shadow: inset 0 0 0 1px var(--color-plum); }
   .pdp__chip.is-na span { opacity: .4; text-decoration: line-through; }
   .pdp__swatch > span {
-    display: block; width: 2.25rem; height: 2.25rem; border-radius: 50%;
+    display: block; width: 1.75rem; height: 1.75rem; border-radius: 50%;
     background: var(--sw, var(--color-sand)); border: 1px solid rgb(74 36 41 / .18);
-    box-shadow: 0 0 0 3px var(--color-paper); cursor: pointer; transition: box-shadow .25s ease;
+    box-shadow: 0 0 0 2px var(--color-paper); cursor: pointer; transition: box-shadow .25s ease;
   }
-  .pdp__swatch input:checked + span { box-shadow: 0 0 0 3px var(--color-paper), 0 0 0 4px var(--color-plum); }
+  .pdp__swatch input:checked + span { box-shadow: 0 0 0 2px var(--color-paper), 0 0 0 3.5px var(--color-plum); }
   .pdp__swatch.is-na > span { opacity: .4; }
   .pdp__chip input:focus-visible + span,
   .pdp__swatch input:focus-visible + span { outline: 2px solid var(--color-amber); outline-offset: 3px; }
 
-  .pdp__buy { display: grid; grid-template-columns: auto 1fr; gap: .75rem; margin-top: .5rem; }
-  .pdp__qty { display: flex; align-items: center; border: 1px solid rgb(74 36 41 / .25); height: 3.25rem; }
-  .pdp__qty button { width: 2.75rem; height: 100%; font-size: 18px; color: var(--color-plum); cursor: pointer; }
-  .pdp__qty input { width: 2.5rem; text-align: center; background: transparent; border: 0; font-size: 15px; color: var(--color-plum); -moz-appearance: textfield; }
+  .pdp__links { display: flex; flex-wrap: wrap; gap: .75rem 1.75rem; }
+  .pdp__links button { display: inline-flex; align-items: center; gap: .5rem; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--color-plum); cursor: pointer; }
+  .pdp__links button span { text-decoration: underline; text-underline-offset: 3px; }
+  .pdp__links button:hover { color: var(--color-amber); }
+  .pdp__links svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+
+  .pdp__notes { display: grid; gap: .5rem; }
+  .pdp__notes > span { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-plum); }
+  .pdp__notes textarea { width: 100%; resize: vertical; padding: .8rem 1rem; background: var(--color-sand); border: 1px solid rgb(74 36 41 / .12); font-size: 14px; color: var(--color-ink); }
+  .pdp__notes textarea:focus { outline: none; border-color: var(--color-plum); }
+
+  .pdp__buy { display: grid; grid-template-columns: auto 1fr; gap: .75rem; }
+  .pdp__qty { display: flex; align-items: center; border: 1px solid rgb(74 36 41 / .2); height: 3rem; }
+  .pdp__qty button { width: 2.6rem; height: 100%; font-size: 17px; color: var(--color-plum); cursor: pointer; }
+  .pdp__qty input { width: 2.25rem; text-align: center; background: transparent; border: 0; font-size: 14px; color: var(--color-plum); -moz-appearance: textfield; }
   .pdp__qty input::-webkit-outer-spin-button, .pdp__qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .pdp__add {
-    height: 3.25rem; padding-inline: 1.5rem; background: var(--color-plum); color: var(--color-cream);
-    font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase;
+    height: 3rem; padding-inline: 1.5rem; background: var(--color-plum); color: var(--color-cream);
+    font-size: var(--text-ui); font-weight: 500; letter-spacing: var(--tracking-widest2); text-transform: uppercase;
     cursor: pointer; transition: background .3s ease;
   }
-  .pdp__add:hover { background: var(--color-amber); }
-  .pdp__add:disabled { opacity: .5; cursor: not-allowed; background: var(--color-plum); }
-  .pdp__checkout { grid-column: 1 / -1; }
-  @media (min-width: 640px) {
-    .pdp__buy { grid-template-columns: auto 1fr 1fr; }
-    .pdp__checkout { grid-column: auto; }
-  }
-  .pdp__checkout .shopify-payment-button__button { height: 3.25rem; min-height: 3.25rem; border-radius: 0; font-family: var(--font-sans); font-size: var(--text-ui); letter-spacing: var(--tracking-widest2); text-transform: uppercase; }
-  .pdp__checkout .shopify-payment-button__button--unbranded { background: var(--color-ink); color: var(--color-cream); }
-  .pdp__checkout .shopify-payment-button__button--unbranded:hover:not([disabled]) { background: var(--color-amber); }
+  .pdp__add:hover { background: var(--color-plum-deep, #3A1B20); }
+  .pdp__add:disabled { opacity: .5; cursor: not-allowed; }
+  .pdp__checkout .shopify-payment-button__button { height: 3rem; min-height: 3rem; border-radius: 0; font-family: var(--font-sans); font-size: var(--text-ui); font-weight: 500; letter-spacing: var(--tracking-widest2); text-transform: uppercase; }
+  .pdp__checkout .shopify-payment-button__button--unbranded { background: var(--color-gold); color: var(--color-plum); }
+  .pdp__checkout .shopify-payment-button__button--unbranded:hover:not([disabled]) { background: var(--color-amber); color: var(--color-cream); }
   .pdp__checkout .shopify-payment-button__more-options { display: none; }
 
-  .pdp__utils { display: flex; flex-wrap: wrap; gap: .75rem 1.75rem; margin-top: 1.5rem; }
-  .pdp__utils button { display: inline-flex; align-items: center; gap: .5rem; font-size: 14px; color: var(--color-plum); cursor: pointer; }
-  .pdp__utils button:hover { color: var(--color-amber); }
-  .pdp__utils svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+  .pdp__pickup { display: flex; gap: .75rem; margin-top: 2rem; font-size: 14px; color: var(--color-ink); }
+  .pdp__pickup svg { width: 20px; height: 20px; flex: 0 0 auto; fill: none; stroke-width: 1.8; }
+  .pdp__pickup .is-ok { stroke: #2f8f6b; }
+  .pdp__pickup .is-no { stroke: #a23a2c; }
+  .pdp__pickup small { display: block; margin-top: .15rem; font-size: 12px; opacity: .7; }
+  .pdp__pickup b { font-weight: 500; color: var(--color-plum); }
 
-  .pdp__meta { margin-top: 1.5rem; display: grid; gap: .5rem; font-size: 14px; }
-  .pdp__meta > div { display: flex; gap: .4rem; }
-  .pdp__meta > div[hidden] { display: none; }
-  .pdp__meta dt { font-weight: 500; color: var(--color-plum); }
-  .pdp__meta dd { color: var(--color-ink); }
-
-  .pdp__pay { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid rgb(74 36 41 / .14); }
-  .pdp__pay-title { font-size: 14px; font-weight: 500; color: var(--color-plum); }
-  .pdp__pay-icons { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .75rem; }
+  .pdp__label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-plum); margin-bottom: .7rem; }
+  .pdp__pay { margin-top: 1.75rem; }
+  .pdp__pay-icons { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .pdp__pay-icons span { display: grid; place-items: center; width: 3.9rem; height: 2.5rem; background: var(--color-sand); border-radius: 3px; }
   .pdp__pay-icons svg { width: 38px; height: 24px; }
-  .pdp__pay-text { margin-top: .75rem; font-size: 13px; line-height: 1.6; color: var(--color-ink); opacity: .75; }
 
-  .pdp__trust {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); margin-top: 1.75rem;
-    border: 1px solid rgb(74 36 41 / .14);
-  }
-  .pdp__trust li { display: flex; flex-direction: column; align-items: center; gap: .6rem; padding: 1.1rem .75rem; text-align: center; font-size: 13px; color: var(--color-plum); }
-  .pdp__trust li + li { border-left: 1px solid rgb(74 36 41 / .14); }
-  .pdp__trust svg { width: 26px; height: 26px; fill: none; stroke: var(--color-amber); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+  .pdp__share { margin-top: 1.75rem; }
+  .pdp__share-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .5rem; }
+  .pdp__share-row > * { display: grid; place-items: center; height: 2.25rem; cursor: pointer; transition: filter .25s ease; }
+  .pdp__share-row > *:hover { filter: brightness(.95); }
+  .pdp__share-row svg { width: 18px; height: 18px; fill: currentColor; }
+  .pdp__share-row .is-fb { background: #e8edf7; color: #3b5998; }
+  .pdp__share-row .is-x { background: #e6f3fb; color: #1d9bf0; }
+  .pdp__share-row .is-pin { background: #fbe7e9; color: #cb2027; }
+  .pdp__share-row .is-wa { background: #e5f6ec; color: #25a15a; }
+  .pdp__share-row .is-mail { background: #f2ece4; color: var(--color-plum); }
+  .pdp__share-row .is-copy { background: #eee8e8; color: var(--color-plum); }
+  .pdp__share-row .is-copy.is-done { background: var(--color-plum); color: var(--color-cream); }
 
   /* Dialogs ---- */
   .pdp__dialog { width: min(40rem, calc(100vw - 2rem)); max-height: 85vh; padding: 0; border: 0; background: var(--color-paper); color: var(--color-ink); margin: auto; }
@@ -434,6 +544,9 @@
   .pdp__dialog-body input, .pdp__dialog-body textarea { border: 1px solid rgb(74 36 41 / .25); background: transparent; padding: .7rem .8rem; font-size: 14px; color: var(--color-ink); }
   .pdp__dialog-body table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .pdp__dialog-body th, .pdp__dialog-body td { border: 1px solid rgb(74 36 41 / .14); padding: .55rem .7rem; text-align: left; }
+  .pdp__lightbox { width: min(60rem, calc(100vw - 2rem)); max-height: 92vh; background: var(--color-sand); }
+  .pdp__lightbox img { display: block; width: 100%; height: auto; max-height: 92vh; object-fit: contain; }
+  .pdp__lightbox-close { position: absolute; top: .5rem; right: .75rem; font-size: 32px; line-height: 1; color: var(--color-plum); cursor: pointer; }
   .pdp__ok { color: #2f7d4a; }
   .pdp__err { color: #a23a2c; font-size: 13px; }
   .prose-lyra p { margin-block: 0.75em; }
@@ -444,36 +557,39 @@
 {
   "name": "Product",
   "settings": [
-    { "type": "text", "id": "price_note", "label": "Note under price", "default": "Inclusive of all taxes. Shipping calculated at checkout." },
-    { "type": "range", "id": "excerpt_words", "label": "Short description length (words)", "min": 10, "max": 80, "step": 5, "default": 35, "info": "Uses the custom.short_description metafield if set, otherwise the start of the description." },
-    { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Buy it now button", "default": true },
+    { "type": "checkbox", "id": "show_vendor", "label": "Show brand", "default": true },
+    { "type": "text", "id": "price_note", "label": "Note under price", "default": "Inclusive of all taxes." },
+    { "type": "range", "id": "low_stock_threshold", "label": "Show \"Hurry! Only N left\" at or below", "min": 1, "max": 30, "step": 1, "default": 10, "info": "Uses real inventory. Hidden for products that don't track stock." },
     { "type": "header", "content": "Links" },
     { "type": "page", "id": "size_guide_page", "label": "Size guide page" },
-    { "type": "checkbox", "id": "show_ask", "label": "Show Ask a question", "default": true },
-    { "type": "header", "content": "Details" },
-    { "type": "text", "id": "delivery_text", "label": "Estimated delivery", "default": "3–7 business days" },
-    { "type": "text", "id": "returns_text", "label": "Shipping & returns", "default": "On all orders over ₹2,999" },
-    { "type": "checkbox", "id": "show_payment", "label": "Show payment & security", "default": true },
-    { "type": "textarea", "id": "payment_text", "label": "Payment & security text", "default": "Your payment information is processed securely. We do not store credit card details nor have access to your credit card information." }
+    { "type": "page", "id": "delivery_page", "label": "Delivery & return page" },
+    { "type": "checkbox", "id": "show_ask", "label": "Show Message (ask a question)", "default": true },
+    { "type": "header", "content": "Buying" },
+    { "type": "checkbox", "id": "show_note", "label": "Show notes box", "default": true, "info": "Saved on the order line, e.g. a name for embroidery." },
+    { "type": "text", "id": "note_placeholder", "label": "Notes placeholder", "default": "Write here your notes for the order" },
+    { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Buy it now button", "default": true },
+    { "type": "header", "content": "Below the buttons" },
+    { "type": "checkbox", "id": "show_payment", "label": "Show safe checkout icons", "default": true },
+    { "type": "checkbox", "id": "show_share", "label": "Show share buttons", "default": true }
   ],
   "blocks": [
     {
-      "type": "trust",
-      "name": "Trust badge",
-      "limit": 4,
+      "type": "perk",
+      "name": "Perk line",
+      "limit": 5,
       "settings": [
         {
           "type": "select", "id": "icon", "label": "Icon", "default": "truck",
           "options": [
             { "value": "truck", "label": "Delivery" },
             { "value": "return", "label": "Returns" },
-            { "value": "shield", "label": "Secure" },
+            { "value": "shield", "label": "Guarantee" },
             { "value": "leaf", "label": "Natural fabric" },
             { "value": "gift", "label": "Gift" },
             { "value": "support", "label": "Support" }
           ]
         },
-        { "type": "text", "id": "label", "label": "Label", "default": "Free delivery" }
+        { "type": "text", "id": "text", "label": "Text", "default": "Free shipping on all orders over ₹2,999." }
       ]
     }
   ]
