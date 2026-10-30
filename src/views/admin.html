@@ -220,6 +220,22 @@
   .timeline li::after { content:""; position:absolute; left:8.5px; top:18px; bottom:0; width:1px; background:var(--line); }
   .timeline li:first-child::before { background:var(--focus); box-shadow:0 0 0 4px rgba(0,91,211,.15); }
   .timeline li:last-child::after { display:none; }
+  /* Phones (e.g. the Shopify mobile app): its floating menu covers the bottom of the screen,
+     so dialogs and bottom bars keep clear of it. */
+  @media (max-width:640px), (pointer:coarse) and (max-width:900px) {
+    :root { --bottom-gap:calc(92px + env(safe-area-inset-bottom, 0px)); }
+    main { padding-bottom:calc(var(--bottom-gap) + 96px); }
+    dialog.sheet { margin:8px auto auto; width:calc(100vw - 16px); max-height:calc(100dvh - var(--bottom-gap) - 16px); }
+    dialog.sheet form { max-height:calc(100dvh - var(--bottom-gap) - 16px); }
+    .dlg-head { padding:12px 14px; }
+    .dlg-body { padding:12px; }
+    .dlg-foot { padding:10px 12px; }
+    .dlg-foot .btn { flex:1; min-height:44px; }
+    .action-bar { bottom:var(--bottom-gap); width:calc(100vw - 16px); }
+    .action-bar .btn.primary { flex:1; }
+    .export-bar { bottom:var(--bottom-gap); }
+    .save-bar { bottom:var(--bottom-gap); }
+  }
   @media (prefers-reduced-motion:reduce) { *, ::before, ::after { animation:none !important; transition:none !important; } }
 </style>
 </head>
