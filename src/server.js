@@ -105,7 +105,8 @@ export function createApp(ctx) {
     const shop = String(req.query.shop ?? '');
     const frameAncestors = isValidShopDomain(shop) ? `https://${shop} https://admin.shopify.com` : 'https://admin.shopify.com';
     res.set('Content-Security-Policy', `frame-ancestors ${frameAncestors};`);
-    res.type('html').send(adminHtml.replace('%SHOPIFY_API_KEY%', shopify.apiKey));
+    // Always load the current version (the Shopify mobile app otherwise keeps an old copy).
+    res.set('Cache-Control', 'no-store').type('html').send(adminHtml.replace('%SHOPIFY_API_KEY%', shopify.apiKey));
   });
 
   // ---------- Admin API (App Bridge session token) ----------
