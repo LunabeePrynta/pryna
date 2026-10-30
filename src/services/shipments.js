@@ -4,6 +4,7 @@
 
 import { isValidBarcode, normalizeBarcode } from '../indiapost/barcode.js';
 import { buildArticle, sanitizeOverrides } from '../indiapost/mapper.js';
+import { guessOffice } from '../indiapost/pincodes.js';
 import { refreshShipments, syncShopifyMetafields } from './tracking.js';
 
 export class ShipmentError extends Error {}
@@ -37,13 +38,78 @@ function orderWarnings(errors) {
   return errors.filter((e) => !ACCOUNT_ONLY.test(e));
 }
 
+/** Form values (overrides) that reproduce a saved article. */
+export function overridesFromArticle(a) {
+  return {
+    receiver: {
+      name: a.receiver_name ?? '',
+      company: a.receiver_company ?? '',
+      address1: a.receiver_add_line_1 ?? '',
+      address2: a.receiver_add_line_2 ?? '',
+      address3: a.receiver_add_line_3 ?? '',
+      postOffice: a.receiver_post_office ?? '',
+      city: a.receiver_city ?? '',
+      province: a.receiver_state ?? '',
+      zip: String(a.receiver_pincode ?? ''),
+      phone: String(a.receiver_mobile_no ?? ''),
+    },
+    product: String(a.article_type ?? '').startsWith('SP_INLAND_') ? 'SPEED_POST' : a.article_type,
+    weightGrams: a.physical_weight,
+    dimensions: { length: a.length, breadth: a.breadth_diameter, height: a.height },
+    insuranceValue: a.value_of_insurance || 0,
+    options: {
+      reg: a.reg === 'TRUE',
+      otp: a.otp === 'TRUE',
+      ack: a.ack === 'TRUE',
+      priority: a.priority_flag === 'TRUE',
+      shape: a.shape_of_article ?? '',
+      deliveryInstruction: a.delivery_instruction ?? '',
+      deliverySlot: a.delivery_slot ?? '',
+      instructionRts: a.instruction_rts ?? '',
+    },
+  };
+}
+
+/**
+ * For a new order: picks the delivery post office from the pincode (the office named in the address,
+ * else the first head / sub office) and fills it in like India Post's booking tool does: post office
+ * as address line 3 (and line 2 when empty); its district and state when the address has none.
+ */
+export async function withPostOffice(ctx, order, overrides = {}) {
+  if (overrides.receiver?.postOffice !== undefined || !ctx.pincodes) return overrides;
+  const address = { ...(order.shippingAddress ?? {}), ...(overrides.receiver ?? {}) };
+  let found;
+  try {
+    found = await ctx.pincodes.lookup(String(address.zip ?? '').replace(/\s/g, ''));
+  } catch (err) {
+    ctx.logger.error(`[shipments] pincode ${address.zip}: ${err.message}`);
+    return overrides;
+  }
+  const office = guessOffice(found.offices, [address.address1, address.address2, address.city].join(' '));
+  if (!office) return overrides;
+  return {
+    ...overrides,
+    receiver: {
+      ...(overrides.receiver ?? {}),
+      postOffice: office.name,
+      address2: address.address2 || office.name,
+      address3: office.name,
+      // The customer's own city and state stay; they're only filled in when missing.
+      city: address.city || office.district || '',
+      province: address.province || office.state || '',
+    },
+  };
+}
+
 /** Everything the "Create order" form needs, prefilled from the Shopify order. */
 export async function orderDraft(ctx, shop, orderId, overrides) {
   const settings = ctx.getSettings(shop);
   const order = await ctx.adminFor(shop).getOrder(orderId);
   if (!order) throw new ShipmentError('Order not found in Shopify');
-  const clean = sanitizeOverrides(overrides);
   const shipment = ctx.db.getShipmentByOrder(shop, orderId);
+  // Editing a saved order starts from what was saved, not from the Shopify order.
+  let clean = sanitizeOverrides(overrides ?? (shipment?.article ? overridesFromArticle(shipment.article) : undefined));
+  if (!overrides && !shipment?.article) clean = await withPostOffice(ctx, order, clean);
   const { article, errors } = buildArticle(order, settings, shipment?.barcode ?? '', clean);
   const address = { ...(order.shippingAddress ?? {}), ...(clean.receiver ?? {}) };
   return {
@@ -65,6 +131,8 @@ export async function orderDraft(ctx, shop, orderId, overrides) {
         company: address.company ?? '',
         address1: address.address1 ?? '',
         address2: address.address2 ?? '',
+        address3: address.address3 ?? '',
+        postOffice: address.postOffice ?? '',
         city: address.city ?? '',
         province: address.province ?? '',
         zip: address.zip ?? '',
@@ -77,8 +145,17 @@ export async function orderDraft(ctx, shop, orderId, overrides) {
         breadth: Number(article.breadth_diameter),
         height: Number(article.height),
       },
-      codAmount: Number(article.value_for_codr_cod) || 0,
       insuranceValue: Number(article.value_of_insurance) || 0,
+      options: {
+        reg: article.reg === 'TRUE',
+        otp: article.otp === 'TRUE',
+        ack: article.ack === 'TRUE',
+        priority: article.priority_flag === 'TRUE',
+        shape: article.shape_of_article,
+        deliveryInstruction: article.delivery_instruction,
+        deliverySlot: article.delivery_slot,
+        instructionRts: article.instruction_rts,
+      },
     },
     articleType: article.article_type,
     warnings: orderWarnings(errors),
@@ -105,10 +182,13 @@ export async function saveShipment(ctx, shop, orderId, { trackingNumber, booking
   const order = await admin.getOrder(orderId);
   if (!order) throw new ShipmentError('Order not found in Shopify');
 
-  const { article, errors } = buildArticle(order, settings, number, sanitizeOverrides(overrides));
+  let shipment = db.getShipmentByOrder(shop, orderId);
+  // Quick entry (no form): a new order gets its post office from the pincode; a saved one keeps its details.
+  let clean = sanitizeOverrides(overrides);
+  if (!overrides) clean = shipment?.article ? sanitizeOverrides(overridesFromArticle(shipment.article)) : await withPostOffice(ctx, order, clean);
+  const { article, errors } = buildArticle(order, settings, number, clean);
   const warnings = orderWarnings(errors);
 
-  let shipment = db.getShipmentByOrder(shop, orderId);
   const numberChanged = shipment && shipment.barcode !== number;
   if (!shipment) {
     shipment = db.createShipment({ shop, orderId, orderName: order.name, customerId: order.customer?.id, barcode: number, status: 'BOOKED' });

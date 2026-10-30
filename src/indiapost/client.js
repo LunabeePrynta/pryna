@@ -11,6 +11,8 @@ export class IndiaPostError extends Error {
 }
 
 const TOKEN_SAFETY_MARGIN_MS = 60_000;
+// India Post's Bulk Tracking API (TNT02) accepts at most 50 articles per request.
+export const BULK_TRACKING_LIMIT = 50;
 
 export class IndiaPostClient {
   constructor({ baseUrl, username, password, fetchImpl = fetch, timeoutMs = 30_000 }) {
@@ -102,15 +104,16 @@ export class IndiaPostClient {
     return this.requestJson('GET', '/v1/pincode-search', { query: { pincode, 'office-type': 'post' } });
   }
 
-  /** Tracking for up to 500 articles booked under this customer. */
   /**
-   * Tracking for up to 500 articles. Uses the Bulk Tracking API; if the account isn't subscribed to it,
+   * Tracking for up to BULK_TRACKING_LIMIT articles booked under this customer. Uses the Bulk Tracking API; if the account isn't subscribed to it,
    * switches (and stays) on "Track single article" (GET /v1/tracking/{trackingNumber}), one call per article.
    * Always returns items in the bulk format.
    */
   async trackBulk(barcodes) {
     if (!barcodes.length) return [];
-    if (barcodes.length > 500) throw new IndiaPostError('Tracking API accepts at most 500 articles per request');
+    if (barcodes.length > BULK_TRACKING_LIMIT) {
+      throw new IndiaPostError(`Tracking API accepts at most ${BULK_TRACKING_LIMIT} articles per request`);
+    }
     if (this.trackingMode !== 'single') {
       try {
         const body = await this.requestJson('POST', '/v1/tracking/bulk', { json: { bulk: barcodes } });

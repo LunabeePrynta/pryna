@@ -2,6 +2,7 @@
 // field rules in the India Post "External Integrations – Approach Document".
 
 export const PRODUCTS = {
+  PARCEL_GYAN_POST: 'Parcel & Gyan Post',
   SPEED_POST: 'Speed Post (auto: document ≤ 500 g, parcel above)',
   BUSINESS_PARCEL: 'Business Parcel',
   '24_SPEEDPOST_DOC': '24 hr Speed Post Document',
@@ -16,11 +17,13 @@ const LIMITS = {
   DOC: { weight: [1, 500], length: [1, 42], breadth: [1, 29], height: [1, 2] },
   PARCEL: { weight: [1, 35000], length: [14, 150], breadth: [9, 150], height: [1, 150] },
   PARSPL: { weight: [1, 5000], length: [14, 150], breadth: [9, 150], height: [1, 150] },
+  PARCEL_GYAN: { weight: [1, 35000], length: [1, 150], breadth: [1, 150], height: [1, 150] },
 };
 
 export function limitsFor(articleType) {
   if (DOC_TYPES.has(articleType)) return LIMITS.DOC;
   if (articleType === '24_SPP_PARSPL') return LIMITS.PARSPL;
+  if (articleType === 'PARCEL_GYAN_POST') return LIMITS.PARCEL_GYAN;
   return LIMITS.PARCEL;
 }
 
@@ -40,6 +43,7 @@ export function defaultSettings() {
       bulkCustomerId: '',
       // Contract id per product, issued by India Post.
       contracts: {
+        PARCEL_GYAN_POST: '',
         SPEED_POST: '',
         BUSINESS_PARCEL: '',
         '24_SPEEDPOST_DOC': '',
@@ -47,7 +51,8 @@ export function defaultSettings() {
         '48_SPEEDPOST_DOC': '',
       },
     },
-    product: 'SPEED_POST',
+    // Service booked for every order (as chosen in India Post's booking tool).
+    product: 'PARCEL_GYAN_POST',
     // DROPOFF: you hand articles in at a post office. PICKUP: India Post collects from your address.
     mode: 'DROPOFF',
     officeId: '',
@@ -71,8 +76,9 @@ export function defaultSettings() {
       parcel: { length: 20, breadth: 15, height: 10 },
       parcelShape: 'NROL',
     },
-    cod: { enabled: true },
     insurance: { enabled: false, minOrderValue: 5000 },
+    // India Post booking options used for every order unless changed on the order.
+    booking: { reg: false, otp: false, ack: false, priority: false, deliveryInstruction: '', deliverySlot: '', instructionRts: '' },
     automation: { notifyCustomer: true },
     // Storefront tracking page: ask for the mobile number together with an order number.
     trackingPage: { requireMobileForOrder: false },
@@ -109,6 +115,17 @@ export function normalizeMobile(value) {
   return /^[6-9]\d{9}$/.test(digits) ? digits : null;
 }
 
+/**
+ * Sender mobile: any 10 digit number (country code / trunk 0 stripped). India Post's booking tool
+ * also uses a placeholder such as 1234567890 here.
+ */
+export function normalizeSenderMobile(value) {
+  let digits = String(value ?? '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+  return /^\d{10}$/.test(digits) ? digits : null;
+}
+
 export function normalizePincode(value) {
   const digits = String(value ?? '').replace(/\s/g, '');
   return /^[1-9]\d{5}$/.test(digits) ? digits : null;
@@ -118,12 +135,30 @@ function clip(value, max = 80) {
   return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
+/** Address text without dots and commas (India Post's booking file doesn't accept them). */
+export function addressText(value) {
+  return clip(String(value ?? '').replace(/[.,]+/g, ' '), 240);
+}
+
+/**
+ * Up to three address lines, without dots and commas. Lines typed separately stay as they are when
+ * each fits India Post's 80 characters; otherwise the text is re-wrapped with splitAddress.
+ */
+export function addressLines(...parts) {
+  const lines = parts.map(addressText).filter(Boolean);
+  if (lines.length <= 3 && lines.every((l) => l.length <= 80)) {
+    const [l1 = '', l2 = '', l3 = ''] = lines;
+    return [l1, l2.length >= 3 ? l2 : '', l3.length >= 3 ? l3 : ''];
+  }
+  return splitAddress(...parts);
+}
+
 /**
  * Splits free-form address text into at most three lines of ≤ 80 chars
  * (combined ≤ 240), breaking on word boundaries.
  */
 export function splitAddress(...parts) {
-  const text = parts.map((p) => clip(p, 240)).filter(Boolean).join(', ').slice(0, 240);
+  const text = parts.map(addressText).filter(Boolean).join(' ').slice(0, 240);
   const lines = [];
   let current = '';
   for (const word of text.split(' ')) {
@@ -168,15 +203,30 @@ export function pickupScheduleDate(slot, date = new Date()) {
   return `${pad(t.getUTCMonth() + 1)}/${pad(t.getUTCDate())}/${t.getUTCFullYear()} ${pad(h12)}:00:00 ${hour < 12 ? 'AM' : 'PM'}`;
 }
 
-function isCashOnDelivery(order) {
-  const gateways = (order.gateways ?? []).join(' ');
-  const unpaid = ['PENDING', 'PARTIALLY_PAID', 'AUTHORIZED'].includes(order.financialStatus);
-  return unpaid && /cash on delivery|\bcod\b/i.test(gateways);
-}
-
 const round2 = (n) => Math.round(Number(n) * 100) / 100;
 
-const RECEIVER_FIELDS = ['name', 'company', 'address1', 'address2', 'city', 'province', 'zip', 'phone'];
+const RECEIVER_FIELDS = ['name', 'company', 'address1', 'address2', 'address3', 'postOffice', 'city', 'province', 'zip', 'phone'];
+
+export const SHAPES = { NROL: 'Box / rectangle', ROLL: 'Roll / cylinder', DOC: 'Document / envelope' };
+export const DELIVERY_INSTRUCTIONS = ['ND', 'OD', 'SD'];
+export const DELIVERY_SLOTS = ['9am-2pm', '2pm-5pm', '5pm-8pm'];
+export const RTS_INSTRUCTIONS = { RTS: 'Return to sender', RTA: 'Return to alternate address' };
+
+const asBool = (v) => v === true || v === 'true' || v === 'TRUE' || v === 'on' || v === 1 || v === '1';
+
+/** India Post booking options from a form (or settings), with unknown values dropped. */
+export function sanitizeBookingOptions(input) {
+  if (!input || typeof input !== 'object') return {};
+  const out = {};
+  for (const key of ['reg', 'otp', 'ack', 'priority']) if (key in input) out[key] = asBool(input[key]);
+  if (input.shape !== undefined && (input.shape === '' || SHAPES[input.shape])) out.shape = input.shape;
+  if (input.deliveryInstruction !== undefined && (input.deliveryInstruction === '' || DELIVERY_INSTRUCTIONS.includes(input.deliveryInstruction))) {
+    out.deliveryInstruction = input.deliveryInstruction;
+  }
+  if (input.deliverySlot !== undefined && (input.deliverySlot === '' || DELIVERY_SLOTS.includes(input.deliverySlot))) out.deliverySlot = input.deliverySlot;
+  if (input.instructionRts !== undefined && (input.instructionRts === '' || RTS_INSTRUCTIONS[input.instructionRts])) out.instructionRts = input.instructionRts;
+  return out;
+}
 
 /**
  * Cleans per-shipment edits coming from the "Create shipment" form. Only known fields survive;
@@ -198,9 +248,41 @@ export function sanitizeOverrides(input) {
     const d = { length: num(input.dimensions.length), breadth: num(input.dimensions.breadth), height: num(input.dimensions.height) };
     if (d.length > 0 && d.breadth > 0 && d.height > 0) out.dimensions = d;
   }
-  if (num(input.codAmount) !== undefined) out.codAmount = Math.max(0, num(input.codAmount));
   if (num(input.insuranceValue) !== undefined) out.insuranceValue = Math.max(0, num(input.insuranceValue));
+  const options = sanitizeBookingOptions(input.options);
+  if (Object.keys(options).length) out.options = options;
   return out;
+}
+
+/** Sender columns of a booking article, from the shop's Settings → Sender address. */
+export function senderFields(settings) {
+  const sender = settings.sender ?? {};
+  const [l1, l2, l3] = addressLines(sender.address1, sender.address2, sender.address3);
+  return {
+    sender_name: clip(sender.name),
+    sender_company: clip(sender.company),
+    sender_add_line_1: l1,
+    sender_add_line_2: l2,
+    sender_add_line_3: l3,
+    sender_city: clip(sender.city),
+    sender_state: clip(sender.state),
+    sender_pincode: normalizePincode(sender.pincode) ?? '',
+    sender_emailid: clip(sender.email),
+    sender_mobile_no: normalizeSenderMobile(sender.mobile) ?? '',
+  };
+}
+
+/** Problems with Settings → Sender address, in plain words (empty list when complete). */
+export function senderProblems(settings) {
+  const sender = settings.sender ?? {};
+  const problems = [];
+  if (!clip(sender.name)) problems.push('name');
+  if (!clip(sender.address1)) problems.push('address line 1');
+  if (!clip(sender.city)) problems.push('city');
+  if (!clip(sender.state)) problems.push('state');
+  if (!normalizePincode(sender.pincode)) problems.push('6 digit pincode');
+  if (!normalizeSenderMobile(sender.mobile)) problems.push('10 digit mobile number');
+  return problems;
 }
 
 /**
@@ -239,7 +321,7 @@ export function buildArticle(order, settings, barcode, overrides = {}) {
 
   const sender = settings.sender;
   const senderPincode = normalizePincode(sender.pincode);
-  const senderMobile = normalizeMobile(sender.mobile);
+  const senderMobile = normalizeSenderMobile(sender.mobile);
   if (!ip.bulkCustomerId) errors.push('Settings: India Post customer id is missing');
   if (!contractId) errors.push(`Settings: contract id for ${articleType} is missing`);
   if (!settings.officeId || !/^\d{8}$/.test(String(settings.officeId))) errors.push('Settings: pickup/drop-off office id must be 8 digits');
@@ -256,20 +338,19 @@ export function buildArticle(order, settings, barcode, overrides = {}) {
   checkRange('Breadth', Number(dims.breadth), limits.breadth, ' cm');
   checkRange('Height', Number(dims.height), limits.height, ' cm');
 
-  const receiverLines = splitAddress(address?.address1, address?.address2);
-  const senderLines = splitAddress(sender.address1, sender.address2, sender.address3);
+  const receiverLines = addressLines(address?.address1, address?.address2, address?.address3);
+  const senderLines = addressLines(sender.address1, sender.address2, sender.address3);
   if (address && receiverLines[0].length < 3) errors.push('Receiver address line 1 is too short');
 
-  const cod =
-    overrides.codAmount !== undefined ? overrides.codAmount > 0 : settings.cod?.enabled && isCashOnDelivery(order);
-  const codValue = cod ? round2(overrides.codAmount ?? (order.outstandingAmount || order.totalAmount)) : '';
   const insure =
     overrides.insuranceValue !== undefined
       ? overrides.insuranceValue > 0
       : settings.insurance?.enabled && Number(order.totalAmount) >= Number(settings.insurance.minOrderValue || 0);
   const insuranceValue = insure ? round2(overrides.insuranceValue ?? order.totalAmount) : 0;
   const pickup = settings.mode === 'PICKUP';
-  const otp = articleType === '24_SPP_PARSPL'; // OTP is mandatory for 24_SPP_PARSPL
+  const options = { ...sanitizeBookingOptions(settings.booking), ...(overrides.options ?? {}) };
+  const otp = articleType === '24_SPP_PARSPL' || Boolean(options.otp); // OTP is mandatory for 24_SPP_PARSPL
+  const flag = (v) => (v ? 'TRUE' : 'FALSE');
 
   const article = {
     bulk_customer_id: String(ip.bulkCustomerId),
@@ -279,23 +360,15 @@ export function buildArticle(order, settings, barcode, overrides = {}) {
     pickup_dropoff_office_id: Number(settings.officeId) || 0,
     article_type: articleType,
     physical_weight: weight,
-    shape_of_article: doc ? 'DOC' : pkg.parcelShape || 'NROL',
+    shape_of_article: options.shape || (doc ? 'DOC' : pkg.parcelShape || 'NROL'),
     length: String(dims.length),
     breadth_diameter: String(dims.breadth),
     height: String(dims.height),
-    priority_flag: '',
-    delivery_instruction: '',
-    delivery_slot: '',
-    instruction_rts: '',
-    sender_name: clip(sender.name),
-    sender_company: clip(sender.company),
-    sender_add_line_1: senderLines[0],
-    sender_add_line_2: senderLines[1],
-    sender_add_line_3: senderLines[2],
-    sender_city: clip(sender.city),
-    sender_state: clip(sender.state),
-    sender_pincode: senderPincode ?? '',
-    sender_emailid: clip(sender.email),
+    priority_flag: options.priority ? 'TRUE' : '',
+    delivery_instruction: options.deliveryInstruction || '',
+    delivery_slot: options.deliverySlot || '',
+    instruction_rts: options.instructionRts || '',
+    ...senderFields(settings),
     sender_alt_contact: '',
     sender_kyc: '',
     sender_tax_reference: '',
@@ -304,6 +377,7 @@ export function buildArticle(order, settings, barcode, overrides = {}) {
     receiver_add_line_1: receiverLines[0],
     receiver_add_line_2: receiverLines[1],
     receiver_add_line_3: receiverLines[2],
+    receiver_post_office: clip(address?.postOffice),
     receiver_city: clip(address?.city),
     receiver_state: clip(address?.province),
     receiver_pincode: receiverPincode ?? '',
@@ -314,17 +388,18 @@ export function buildArticle(order, settings, barcode, overrides = {}) {
     alt_address_flag: 'FALSE',
     pickup_address_flag: pickup ? 'TRUE' : 'FALSE',
     drop_off_pincode: pickup ? '' : senderPincode ?? '',
-    sender_mobile_no: senderMobile ?? '',
     receiver_mobile_no: receiverMobile ?? '',
+    // No prepayment code or amount in the booking file.
     prepayment_code: '',
     value_of_prepayment: 0,
-    codr_cod: cod ? 'COD' : '',
-    value_for_codr_cod: codValue,
+    // All orders are prepaid: no cash on delivery.
+    codr_cod: '',
+    value_for_codr_cod: '',
     insurance_type: insure ? 'DOP' : '',
     value_of_insurance: insuranceValue,
-    ack: 'FALSE',
-    reg: 'FALSE',
-    otp: otp ? 'TRUE' : 'FALSE',
+    ack: flag(options.ack),
+    reg: flag(options.reg),
+    otp: flag(otp),
     bulk_reference: clip(order.name, 50),
     pickup_address_id: '',
     pickup_addressee_name: pickup ? clip(sender.name) : '',

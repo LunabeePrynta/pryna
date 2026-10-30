@@ -7,6 +7,8 @@ import {
   sanitizeOverrides,
   pickupScheduleDate,
   splitAddress,
+  defaultSettings,
+  mergeSettings,
 } from '../src/indiapost/mapper.js';
 import { sampleOrder, sampleSettings } from './fixtures.js';
 
@@ -29,7 +31,20 @@ test('splits long addresses into three 80 character lines', () => {
   assert.equal(lines.length, 3);
   lines.forEach((l) => assert.ok(l.length <= 80));
   assert.ok(lines.join('').length <= 240);
-  assert.deepEqual(splitAddress('12 MG Road', 'x'), ['12 MG Road, x', '', '']);
+  assert.deepEqual(splitAddress('12 MG Road', 'x'), ['12 MG Road x', '', '']);
+});
+
+test('address lines have no dots or commas', () => {
+  const { article } = buildArticle(
+    sampleOrder(),
+    sampleSettings({ sender: { ...sampleSettings().sender, address1: 'No. 12, M.G. Road', address2: 'Near Bus Stand.' } }),
+    'ET214330015IN',
+  );
+  assert.equal(article.receiver_add_line_1, 'Flat 4B Green Residency 2nd Cross');
+  assert.equal(article.sender_add_line_1, 'No 12 M G Road');
+  assert.equal(article.sender_add_line_2, 'Near Bus Stand');
+  assert.equal(article.prepayment_code, '');
+  assert.equal(article.value_of_prepayment, 0);
 });
 
 test('builds a valid parcel article from a paid order', () => {
@@ -49,11 +64,11 @@ test('builds a valid parcel article from a paid order', () => {
   assert.equal(article.bulk_reference, '#1001');
 });
 
-test('books unpaid cash-on-delivery orders as COD', () => {
+test('every order is booked prepaid, even an unpaid cash-on-delivery order', () => {
   const order = sampleOrder({ financialStatus: 'PENDING', gateways: ['Cash on Delivery (COD)'], outstandingAmount: 1499 });
-  const { article } = buildArticle(order, sampleSettings(), 'ET214330015IN');
-  assert.equal(article.codr_cod, 'COD');
-  assert.equal(article.value_for_codr_cod, 1499);
+  const { article } = buildArticle(order, sampleSettings(), 'ET214330015IN', sanitizeOverrides({ codAmount: 999 }));
+  assert.equal(article.codr_cod, '');
+  assert.equal(article.value_for_codr_cod, '');
 });
 
 test('light orders become documents with document dimensions', () => {
@@ -93,7 +108,6 @@ test('form edits override order data and defaults', () => {
     product: 'BUSINESS_PARCEL',
     weightGrams: '1500.4',
     dimensions: { length: '25', breadth: '20', height: '12' },
-    codAmount: '999',
     insuranceValue: '0',
     unknown: true,
   });
@@ -109,13 +123,14 @@ test('form edits override order data and defaults', () => {
   assert.equal(article.receiver_city, 'Bengaluru', 'untouched fields come from the order');
   assert.equal(article.physical_weight, 1500);
   assert.equal(article.height, '12');
-  assert.equal(article.codr_cod, 'COD');
-  assert.equal(article.value_for_codr_cod, 999);
   assert.equal(article.insurance_type, '');
 });
 
-test('a COD amount of 0 books an unpaid COD order as prepaid', () => {
-  const order = sampleOrder({ financialStatus: 'PENDING', gateways: ['Cash on Delivery (COD)'], outstandingAmount: 1499 });
-  const { article } = buildArticle(order, sampleSettings(), 'ET214330015IN', sanitizeOverrides({ codAmount: 0 }));
-  assert.equal(article.codr_cod, '');
+test('new stores book every order as Parcel & Gyan Post', () => {
+  assert.equal(defaultSettings().product, 'PARCEL_GYAN_POST');
+  const settings = mergeSettings({ ...sampleSettings(), product: defaultSettings().product });
+  const { article, errors } = buildArticle(sampleOrder({ totalWeightGrams: 500 }), settings, 'CL581690681IN', sanitizeOverrides({ dimensions: { length: 15, breadth: 10, height: 5 } }));
+  assert.equal(article.article_type, 'PARCEL_GYAN_POST', 'no switch to a document at 500 g');
+  assert.equal(article.shape_of_article, 'NROL');
+  assert.deepEqual(errors.filter((e) => !/contract id/.test(e)), [], 'small parcels are fine');
 });

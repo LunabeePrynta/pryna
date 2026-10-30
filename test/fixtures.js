@@ -3,6 +3,7 @@ import { mergeSettings } from '../src/indiapost/mapper.js';
 
 export function sampleSettings(overrides = {}) {
   return mergeSettings({
+    product: 'SPEED_POST',
     indiaPost: {
       username: 'u',
       password: 'p',

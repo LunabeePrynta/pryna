@@ -93,3 +93,9 @@ test('falls back to "Track single article" when bulk tracking is not subscribed'
   await client.trackBulk(['RM019388105IN']);
   assert.deepEqual(calls, ['GET /v1/tracking/RM019388105IN']);
 });
+
+test('bulk tracking sends at most 50 articles per request', async () => {
+  const client = new IndiaPostClient({ baseUrl: 'https://ip.test', username: 'u', password: 'p', fetchImpl: async () => json({}) });
+  const barcodes = Array.from({ length: 51 }, (_, i) => `EB${String(i).padStart(9, '0')}IN`);
+  await assert.rejects(client.trackBulk(barcodes), /at most 50 articles/);
+});

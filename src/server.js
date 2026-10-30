@@ -5,7 +5,7 @@ import express from 'express';
 import { config } from './config.js';
 import { openDatabase } from './db.js';
 import { IndiaPostError } from './indiapost/client.js';
-import { PRODUCTS } from './indiapost/mapper.js';
+import { PRODUCTS, senderProblems } from './indiapost/mapper.js';
 import { STATUS_LABELS } from './indiapost/events.js';
 import {
   exchangeToken,
@@ -16,7 +16,7 @@ import {
 } from './shopify/auth.js';
 import { createContext } from './services/context.js';
 import { ShipmentError, orderDraft, saveShipment } from './services/shipments.js';
-import { exportShipments } from './services/export.js';
+import { EXPORT_FORMATS, exportShipments } from './services/export.js';
 import { handleIndiaPostEvent, pollAllShops, refreshShipments, searchTracking } from './services/tracking.js';
 import { renderStandalonePage, renderTrackingContent } from './views/track.js';
 
@@ -164,6 +164,8 @@ export function createApp(ctx) {
       webhookUrl: ctx.webhookUrl(req.shop),
       serverIp: ctx.config.serverIp,
       trackingPageUrl: `https://${req.shop}${shopify.proxyPath}`,
+      nextExportRef: ctx.nextExportRef(req.shop),
+      senderProblems: senderProblems(ctx.getSettings(req.shop)),
     });
   });
 
@@ -242,6 +244,7 @@ export function createApp(ctx) {
 
   api.get('/export', asyncRoute(async (req, res) => {
     const date = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v ?? '')) ? String(v) : undefined);
+    const format = EXPORT_FORMATS[req.query.format] ? req.query.format : 'indiapost';
     const { buffer, count } = await exportShipments(ctx, req.shop, {
       from: date(req.query.from),
       to: date(req.query.to),
@@ -252,11 +255,13 @@ export function createApp(ctx) {
         .filter((n) => Number.isInteger(n) && n > 0)
         .slice(0, 1000),
       markExported: req.query.mark !== '0',
+      format,
+      ref: /^\d{1,9}$/.test(String(req.query.ref ?? '')) && Number(req.query.ref) > 0 ? Number(req.query.ref) : undefined,
     });
     const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
     res
       .type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-      .set('Content-Disposition', `attachment; filename="india-post-orders-${today}.xlsx"`)
+      .set('Content-Disposition', `attachment; filename="${EXPORT_FORMATS[format].file}-${today}.xlsx"`)
       .set('X-Row-Count', String(count))
       .send(buffer);
   }));
@@ -287,7 +292,9 @@ export function createApp(ctx) {
   api.put('/settings', (req, res) => {
     const input = req.body?.settings ?? {};
     // The India Post login is sent to this server, so only India Post (CEPT) HTTPS hosts are accepted.
-    const baseUrl = String(input.indiaPost?.baseUrl ?? '').trim().replace(/\/+$/, '');
+    let baseUrl = indiaPostBaseUrl(input.indiaPost?.baseUrl);
+    // The test server pasted as "production" is the test server.
+    if (baseUrl === ctx.config.indiaPost.baseUrl) baseUrl = '';
     if (baseUrl && !isIndiaPostUrl(baseUrl)) {
       return res.status(400).json({ error: 'India Post API server must be an https://… address on cept.gov.in or indiapost.gov.in' });
     }
@@ -315,9 +322,8 @@ export function createApp(ctx) {
   });
 
   api.get('/pincode/:pin', asyncRoute(async (req, res) => {
-    if (!/^\d{6}$/.test(req.params.pin)) return res.status(400).json({ error: 'Pincode must be 6 digits' });
-    const offices = await ctx.indiaPostFor(req.shop).pincodeSearch(req.params.pin);
-    res.json({ offices: filterOffices(offices) });
+    if (!/^[1-9]\d{5}$/.test(req.params.pin)) return res.status(400).json({ error: 'Pincode must be 6 digits' });
+    res.json(await ctx.pincodes.lookup(req.params.pin));
   }));
 
   app.use('/api', api);
@@ -385,6 +391,12 @@ export function networkReason(err) {
   return [err?.message, code, cause.message].filter(Boolean).join(' — ');
 }
 
+/** API base address from what was pasted: no query, no trailing slash, nothing from /v1/ on. */
+export function indiaPostBaseUrl(value) {
+  const text = String(value ?? '').trim().replace(/[?#].*$/, '');
+  return text.replace(/\/v\d+(\/.*)?$/i, '').replace(/\/+$/, '');
+}
+
 export function isIndiaPostUrl(value) {
   try {
     const url = new URL(value);
@@ -424,14 +436,6 @@ function publicShipment(s) {
     lastEvent: s.last_event,
     lastEventAt: s.last_event_at,
   };
-}
-
-function filterOffices(offices) {
-  if (!Array.isArray(offices)) return [];
-  // Offices usable for pickup / drop-off: delivery offices that are not branch post offices.
-  return offices
-    .filter((o) => o.delivery_office_flag && o.office_type_code !== 'BPO')
-    .map((o) => ({ id: o.office_id, name: o.office_name, type: o.office_type_code, city: o.city_name, state: o.state_name }));
 }
 
 async function handleShopifyWebhook(ctx, shop, topic, payload) {

@@ -31,6 +31,8 @@ export const config = {
   },
   // Public IP of this server, shown to merchants so India Post can whitelist it.
   serverIp: env('SERVER_PUBLIC_IP', ''),
+  // Look pincodes up in the live public directory (api.postalpincode.in) before the bundled one.
+  pincodeLive: env('PINCODE_LIVE', '1') !== '0',
   // 32 byte key (hex or base64) used to encrypt India Post passwords at rest.
   encryptionKey: env('ENCRYPTION_KEY', ''),
   databasePath: env('DATABASE_PATH', path.resolve('data/app.db')),

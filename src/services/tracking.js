@@ -2,6 +2,7 @@
 // and answer public tracking lookups.
 
 import { isValidBarcode, normalizeBarcode } from '../indiapost/barcode.js';
+import { BULK_TRACKING_LIMIT } from '../indiapost/client.js';
 import { normalizeMobile } from '../indiapost/mapper.js';
 import {
   STATUS_LABELS,
@@ -11,7 +12,7 @@ import {
   shopifyStatusFor,
 } from '../indiapost/events.js';
 
-const TRACKING_CHUNK = 500;
+const TRACKING_CHUNK = BULK_TRACKING_LIMIT;
 const FRESH_MS = 5 * 60_000;
 
 /**

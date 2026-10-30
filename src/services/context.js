@@ -3,6 +3,7 @@
 import { IndiaPostClient } from '../indiapost/client.js';
 import { defaultSettings, mergeSettings } from '../indiapost/mapper.js';
 import { ShopifyAdmin } from '../shopify/admin.js';
+import { createPincodeLookup } from '../indiapost/pincodes.js';
 import crypto from 'node:crypto';
 import { decryptSecret, encryptSecret } from '../shopify/auth.js';
 
@@ -13,6 +14,7 @@ export function createContext({ db, config, fetchImpl = fetch, logger = console 
   const clients = new Map();
 
   const ctx = {
+    pincodes: createPincodeLookup({ fetchImpl, logger, live: config.pincodeLive !== false }),
     db,
     config,
     logger,
@@ -58,6 +60,18 @@ export function createContext({ db, config, fetchImpl = fetch, logger = console 
 
     webhookUrl(shop) {
       return `${config.appUrl}/webhooks/indiapost/${ctx.webhookToken(shop)}`;
+    },
+
+    /** Ref no for the next India Post booking file (BULK REFERENCE = "<ref no>/<serial>"). */
+    nextExportRef(shop) {
+      const n = Number(mergeSettings(db.getSettingsRaw(shop)).exportRef?.next);
+      return Number.isInteger(n) && n > 0 ? n : 1;
+    },
+
+    setNextExportRef(shop, next) {
+      const raw = mergeSettings(db.getSettingsRaw(shop));
+      raw.exportRef = { next };
+      db.saveSettingsRaw(shop, raw);
     },
 
     /** Stores the result of the last "Test connection". */

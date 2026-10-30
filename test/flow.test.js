@@ -126,6 +126,7 @@ async function setup() {
 }
 
 const SETTINGS = {
+  product: 'SPEED_POST',
   indiaPost: { bulkCustomerId: '3000064781', contracts: { SPEED_POST: '41585456' } },
   officeId: '21260024',
   sender: { name: 'Luna Bee Store', address1: '12 MG Road', city: 'Chennai', state: 'Tamil Nadu', pincode: '600001', mobile: '9876543210' },
@@ -227,7 +228,7 @@ test('quick save several orders, then download the Excel sheet', async (t) => {
   assert.equal(fulfilCalls(calls).length, 2);
 
   // Excel with both saved orders.
-  const res = await call('/api/export?from=2026-09-26&to=2026-09-26');
+  const res = await call('/api/export?from=2026-09-26&to=2026-09-26&format=report');
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-type'), /spreadsheetml/);
   assert.match(res.headers.get('content-disposition'), /attachment; filename="india-post-orders-\d{4}-\d{2}-\d{2}\.xlsx"/);
@@ -244,9 +245,8 @@ test('quick save several orders, then download the Excel sheet', async (t) => {
   assert.equal(row(2).Order, '#1001');
   assert.equal(row(2)['Tracking number'], AWB1);
   assert.equal(row(2).Pincode, '560038');
-  assert.equal(row(2)['COD amount'], 0);
   assert.equal(row(3).Order, '#1002');
-  assert.equal(row(3)['COD amount'], 899, 'unpaid COD order carries the COD amount');
+  assert.equal(row(3)['COD amount'], undefined, 'no COD column: all orders are prepaid');
   assert.equal(row(3).Product, 'Speed Post (document)');
 
   const upload = workbook.getWorksheet('India Post upload');
@@ -258,7 +258,7 @@ test('quick save several orders, then download the Excel sheet', async (t) => {
   // Only the ticked orders go into the file, whatever the date filter says.
   const { shipments: all } = await callJson('/api/shipments');
   const second = all.find((s) => s.orderName === '#1002');
-  const ticked = await call(`/api/export?ids=${second.id}&from=2030-01-01&mark=0`);
+  const ticked = await call(`/api/export?ids=${second.id}&from=2030-01-01&mark=0&format=report`);
   assert.equal(ticked.headers.get('x-row-count'), '1');
   const tickedBook = new ExcelJS.Workbook();
   await tickedBook.xlsx.load(Buffer.from(await ticked.arrayBuffer()));
@@ -483,4 +483,212 @@ test('storefront tracking page: search by tracking number, order number or mobil
   assert.match(await page({ q: '#1001', mobile: '9876501234' }), new RegExp(AWB1));
   assert.match(await page({ q: '#1002', mobile: '09876501234' }), /Order #1002 is confirmed/);
   assert.doesNotMatch(await page({ q: '#1002', mobile: '9000000000' }), /is confirmed/);
+});
+
+test('India Post ArticleDetails file matches the India Post template, with per-order booking options', async (t) => {
+  const { server, call, callJson } = await setup();
+  t.after(() => server.close());
+  await call('/api/settings', {
+    method: 'PUT',
+    body: {
+      settings: {
+        ...SETTINGS,
+        sender: { name: 'Kulambil Gas Industries', address1: '461/50', address2: 'East Kodur', address3: 'Chattiparamba PO', city: 'Malappuram', state: 'Kerala', pincode: '676504', mobile: '7907143164' },
+        booking: { reg: false, otp: true, ack: false },
+      },
+    },
+  });
+
+  // Defaults from Settings show in the form.
+  const draft = await callJson('/api/order?id=1002');
+  assert.equal(draft.form.options.otp, true);
+  assert.equal(draft.form.options.reg, false);
+
+  // Per-order options: REG + ACK + priority + delivery slot + return instruction, OTP off, shape NROL.
+  await callJson('/api/order/save', {
+    method: 'POST',
+    body: {
+      orderId: 'gid://shopify/Order/1002',
+      trackingNumber: AWB1,
+      bookingDate: '2026-10-03',
+      overrides: {
+        weightGrams: '2000',
+        dimensions: { length: '35', breadth: '31', height: '10' },
+        codAmount: '2200', // ignored: all orders are prepaid
+        options: { reg: 'true', otp: false, ack: true, priority: true, shape: 'NROL', deliverySlot: '2pm-5pm', instructionRts: 'RTS', deliveryInstruction: 'BOGUS' },
+      },
+    },
+  });
+  await callJson('/api/order/save', { method: 'POST', body: { orderId: 'gid://shopify/Order/1001', trackingNumber: AWB2, bookingDate: '2026-10-03' } });
+
+  // Editing a saved order shows what was saved.
+  const saved = await callJson('/api/order?id=1002');
+  assert.equal(saved.form.weightGrams, 2000);
+  assert.equal(saved.form.codAmount, undefined);
+  assert.deepEqual(
+    { ...saved.form.options },
+    { reg: true, otp: false, ack: true, priority: true, shape: 'NROL', deliveryInstruction: '', deliverySlot: '2pm-5pm', instructionRts: 'RTS' },
+  );
+
+  // Default download = India Post ArticleDetails file.
+  const res = await call('/api/export?from=2026-10-03&to=2026-10-03');
+  assert.match(res.headers.get('content-disposition'), /filename="ArticleDetails-\d{4}-\d{2}-\d{2}\.xlsx"/);
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(Buffer.from(await res.arrayBuffer()));
+  const sheet = book.getWorksheet('ArticleDetails');
+  assert.ok(sheet, 'sheet is named ArticleDetails like the template');
+
+  // Same headers, same order as India Post's template.
+  const template = new ExcelJS.Workbook();
+  await template.xlsx.readFile(new URL('./fixtures/ArticleDetails-template.xlsx', import.meta.url).pathname);
+  const expected = template.getWorksheet('ArticleDetails').getRow(1).values.slice(1);
+  assert.deepEqual(sheet.getRow(1).values.slice(1), expected);
+  assert.equal(expected.length, 48);
+
+  const row = (n) => Object.fromEntries(expected.map((h, i) => [h, sheet.getRow(n).getCell(i + 1).value]));
+  assert.equal(sheet.rowCount, 3);
+  const first = row(2); // #1002 saved first
+  assert.equal(first['SERIAL NUMBER'], 1);
+  assert.equal(first['BARCODE NO'], AWB1);
+  assert.equal(first['PHYSICAL WEIGHT'], 2000);
+  assert.equal(first.REG, true);
+  assert.equal(first.OTP, false);
+  assert.equal(first.ACK, true);
+  assert.equal(first['PRIORITY FLAG'], true);
+  assert.equal(first['RECEIVER CITY'], 'BENGALURU');
+  assert.equal(first['RECEIVER PINCODE'], 560038);
+  assert.equal(first['RECEIVER NAME'], 'ASHA KUMAR');
+  assert.equal(first['RECEIVER MOBILE NO'], 9876501234);
+  assert.equal(first['SENDER MOBILE NO'], 7907143164);
+  assert.equal(first['CODR/COD'], null, 'all orders are prepaid');
+  assert.equal(first['VALUE FOR CODR/COD'], null);
+  assert.equal(first['PREPAYMENT CODE'], null, 'no prepayment code');
+  assert.equal(first['VALUE OF PREPAYMENT'], null, 'no prepaid amount');
+  assert.equal(first['SHAPE OF ARTICLE'], 'NROL');
+  assert.deepEqual([first['LENGTH '], first['BREADTH/DIAMETER'], first.HEIGHT], [35, 31, 10]);
+  assert.equal(first['DELIVERY SLOT'], '2pm-5pm');
+  assert.equal(first['INSTRUCTION RTS'], 'RTS');
+  assert.equal(first['DELIVERY INSTRUCTION'], null, 'unknown values are dropped');
+  assert.equal(first['SENDER NAME'], 'KULAMBIL GAS INDUSTRIES');
+  assert.equal(first['SENDER CITY'], 'MALAPPURAM');
+  assert.equal(first['SENDER STATE/UT'], 'KERALA');
+  assert.equal(first['SENDER PINCODE'], '676504');
+  assert.equal(first['ALT ADDRESS FLAG'], false);
+  assert.equal(first['BULK REFERENCE'], '#1002');
+  assert.deepEqual(
+    [first['SENDER ADD LINE 1'], first['SENDER ADD LINE 2'], first['SENDER ADD LINE 3']],
+    ['461/50', 'East Kodur', 'Chattiparamba PO'],
+    'sender lines stay as typed in Settings',
+  );
+
+  const prepaid = row(3);
+  assert.equal(prepaid['SERIAL NUMBER'], 2);
+  assert.equal(prepaid.OTP, true, 'Settings default');
+  assert.equal(prepaid['CODR/COD'], null);
+  assert.equal(prepaid['VALUE FOR CODR/COD'], null);
+  assert.equal(prepaid['VALUE OF PREPAYMENT'], null);
+  // Quick entry: the post office comes from the pincode; the customer's city stays.
+  assert.deepEqual(
+    [prepaid['RECEIVER ADD LINE 1'], prepaid['RECEIVER ADD LINE 2'], prepaid['RECEIVER ADD LINE 3']],
+    ['FLAT 4B GREEN RESIDENCY 2ND CROSS', 'INDIRANAGAR', 'INDIRANAGAR SO (BANGALORE)'],
+  );
+  assert.equal(prepaid['RECEIVER CITY'], 'BENGALURU');
+
+  // With a Ref no, BULK REFERENCE is "<ref>/<serial>" and the next file gets the next ref no.
+  assert.equal((await callJson('/api/bootstrap')).nextExportRef, 1);
+  const withRef = await call('/api/export?from=2026-10-03&to=2026-10-03&ref=7');
+  const refBook = new ExcelJS.Workbook();
+  await refBook.xlsx.load(Buffer.from(await withRef.arrayBuffer()));
+  const refSheet = refBook.getWorksheet('ArticleDetails');
+  const refCol = expected.indexOf('BULK REFERENCE') + 1;
+  assert.deepEqual([refSheet.getRow(2).getCell(refCol).value, refSheet.getRow(3).getCell(refCol).value], ['7/1', '7/2']);
+  assert.equal((await callJson('/api/bootstrap')).nextExportRef, 8);
+});
+
+test('post office lookup: live directory first, bundled India Post directory as fallback', async () => {
+  const { createPincodeLookup, guessOffice } = await import('../src/indiapost/pincodes.js');
+  const live = createPincodeLookup({
+    fetchImpl: async (url) => {
+      assert.equal(String(url), 'https://api.postalpincode.in/pincode/683561');
+      return new Response(JSON.stringify([{ Status: 'Success', PostOffice: [
+        { Name: 'Vilangu', BranchType: 'Branch Post Office', District: 'Ernakulam', State: 'Kerala' },
+        { Name: 'Edathala', BranchType: 'Sub Post Office', District: 'Ernakulam', State: 'Kerala' },
+      ] }]));
+    },
+  });
+  const found = await live.lookup('683561');
+  assert.equal(found.source, 'live');
+  assert.deepEqual(found.offices.map((o) => o.name), ['Edathala SO', 'Vilangu BO']);
+  assert.equal(found.offices[0].state, 'KERALA');
+
+  const offline = createPincodeLookup({ fetchImpl: async () => { throw new Error('offline'); }, logger: { warn() {} } });
+  const bundled = await offline.lookup('683561');
+  assert.equal(bundled.source, 'bundled');
+  assert.equal(bundled.offices[0].name, 'Edathala SO');
+  assert.equal(guessOffice(bundled.offices, 'Near Vilangu temple').name, 'Vilangu BO');
+  assert.equal(guessOffice(bundled.offices, 'Pallikutti canal road').name, 'Edathala SO');
+  assert.equal((await offline.lookup('12345')).source, 'none');
+});
+
+test('tracking refresh splits shipments into batches of 50', async () => {
+  const { refreshShipments } = await import('../src/services/tracking.js');
+  const batches = [];
+  const shipments = Array.from({ length: 120 }, (_, i) => ({ id: i + 1, barcode: `EB${String(i).padStart(9, '0')}IN` }));
+  const ctx = {
+    indiaPostFor: () => ({ trackBulk: async (chunk) => (batches.push(chunk.length), []) }),
+    db: { updateShipment() {} },
+  };
+  await refreshShipments(ctx, 'shop.myshopify.com', shipments);
+  assert.deepEqual(batches, [50, 50, 20]);
+});
+
+test('Excel uses the sender from Settings, also for orders created before it was filled in', async (t) => {
+  const { server, call, callJson } = await setup();
+  t.after(() => server.close());
+  await call('/api/settings', { method: 'PUT', body: { settings: { ...SETTINGS, sender: {} } } });
+  assert.ok((await callJson('/api/bootstrap')).senderProblems.includes('name'));
+  await callJson('/api/order/save', { method: 'POST', body: { orderId: 'gid://shopify/Order/1001', trackingNumber: AWB1, bookingDate: '2026-10-16' } });
+
+  await call('/api/settings', {
+    method: 'PUT',
+    body: { settings: { ...SETTINGS, sender: { name: 'Lunabee', address1: 'Thottathil House, Chall', address3: 'MALAPPURAM - 676509', city: 'Malappuram', state: 'Kerala', pincode: '676509', mobile: '9876543210' } } },
+  });
+  assert.deepEqual((await callJson('/api/bootstrap')).senderProblems, []);
+
+  const res = await call('/api/export?from=2026-10-16&to=2026-10-16');
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(Buffer.from(await res.arrayBuffer()));
+  const sheet = book.getWorksheet('ArticleDetails');
+  const header = sheet.getRow(1).values.slice(1);
+  const cell = (h) => sheet.getRow(2).getCell(header.indexOf(h) + 1).value;
+  assert.equal(cell('SENDER NAME'), 'LUNABEE');
+  assert.equal(cell('SENDER ADD LINE 1'), 'Thottathil House Chall');
+  assert.equal(cell('SENDER ADD LINE 2'), 'MALAPPURAM - 676509');
+  assert.equal(cell('SENDER CITY'), 'MALAPPURAM');
+  assert.equal(cell('SENDER STATE/UT'), 'KERALA');
+  assert.equal(cell('SENDER PINCODE'), '676509');
+  assert.equal(cell('SENDER MOBILE NO'), 9876543210);
+
+  // A placeholder sender mobile like India Post's booking tool uses is exported as it is.
+  await call('/api/settings', { method: 'PUT', body: { settings: { ...SETTINGS, sender: { ...SETTINGS.sender, mobile: '1234567890' } } } });
+  assert.deepEqual((await callJson('/api/bootstrap')).senderProblems, []);
+  const again = new ExcelJS.Workbook();
+  await again.xlsx.load(Buffer.from(await (await call('/api/export?from=2026-10-16&to=2026-10-16')).arrayBuffer()));
+  const row = again.getWorksheet('ArticleDetails').getRow(2);
+  assert.equal(row.getCell(header.indexOf('SENDER MOBILE NO') + 1).value, 1234567890);
+});
+
+test('India Post API address: a pasted endpoint link is cut back to the base address', async (t) => {
+  const { indiaPostBaseUrl } = await import('../src/server.js');
+  assert.equal(indiaPostBaseUrl('https://test.cept.gov.in/beextcustomer/v1/tracking/bulk'), 'https://test.cept.gov.in/beextcustomer');
+  assert.equal(indiaPostBaseUrl(' https://api.cept.gov.in/beextcustomer/ '), 'https://api.cept.gov.in/beextcustomer');
+  assert.equal(indiaPostBaseUrl('https://api.cept.gov.in/beextcustomer/v1/access/login?x=1'), 'https://api.cept.gov.in/beextcustomer');
+
+  const { server, call, callJson } = await setup();
+  t.after(() => server.close());
+  await call('/api/settings', { method: 'PUT', body: { settings: { ...SETTINGS, indiaPost: { ...SETTINGS.indiaPost, baseUrl: 'https://prod.cept.gov.in/beextcustomer/v1/trac' } } } });
+  assert.equal((await callJson('/api/settings')).settings.indiaPost.baseUrl, 'https://prod.cept.gov.in/beextcustomer');
+  // The test server typed as "production" is stored as the test server.
+  await call('/api/settings', { method: 'PUT', body: { settings: { ...SETTINGS, indiaPost: { ...SETTINGS.indiaPost, baseUrl: `${IP_BASE}/v1/tracking/bulk` } } } });
+  assert.equal((await callJson('/api/settings')).settings.indiaPost.baseUrl, '');
 });
