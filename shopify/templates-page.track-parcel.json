@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "main": { "type": "lunabee-track-code", "settings": { "api_url": "" } }
+  },
+  "order": ["main"]
+}

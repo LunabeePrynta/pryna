@@ -1,0 +1,113 @@
+{%- comment -%}
+  Lunabee — Track by tracking code.
+  India Post code  -> tells the customer it's an India Post parcel + link to India Post.
+  Ekart code       -> fetched via the tracking API (settings.api_url) and shown here:
+                      expected delivery date, progress steps and full scan history.
+{%- endcomment -%}
+{%- assign s = section.settings -%}
+
+<section class="lb lb-tc" data-lb-tc data-api="{{ s.api_url | escape }}" data-indiapost="{{ s.india_post_url | escape }}">
+  <div class="lb__wrap lb-tc__wrap">
+    <h1 class="lb-tc__title lb__display">{{ s.title | default: 'Track your parcel' }}</h1>
+    <p class="lb-tc__sub">Enter the tracking code from your shipping message or email.</p>
+
+    <form class="lb-tc__form" data-form>
+      <input class="lb-tc__input" name="code" placeholder="e.g. FMPP1234567890" autocomplete="off" required>
+      <button class="lb-tc__btn" type="submit">Track</button>
+    </form>
+
+    <div data-out aria-live="polite"></div>
+
+    {%- if customer -%}
+      <p class="lb-tc__alt"><a href="{{ s.orders_page_url | default: routes.account_url }}">View my orders instead</a></p>
+    {%- endif -%}
+  </div>
+</section>
+
+<script>
+(function(){
+  var root=document.currentScript.previousElementSibling; if(!root) return;
+  var API=root.getAttribute('data-api'), IP=root.getAttribute('data-indiapost');
+  var out=root.querySelector('[data-out]'), form=root.querySelector('[data-form]'), input=form.code;
+  function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+  function fmt(d,t){var x=new Date(d);if(isNaN(x))return '';return x.toLocaleString('en-IN',t?{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}:{weekday:'short',day:'numeric',month:'long',year:'numeric'});}
+  function card(h){out.innerHTML='<div class="lb-tc__card">'+h+'</div>';}
+  function indiaPost(code,url){
+    card('<h2 class="lb-tc__h lb__display">This is an India Post parcel</h2>'+
+      '<p>Your parcel <b>'+esc(code)+'</b> is being delivered by India Post. You can track it on the India Post website:</p>'+
+      '<p><a class="lb-tc__btn" href="'+esc(url||IP)+'" target="_blank" rel="noopener">Track on India Post</a></p>'+
+      '<p class="lb-tc__note">Copy your tracking number and paste it on the India Post page.</p>');
+  }
+  function ekart(r){
+    var t=r.tracking;
+    var steps=(t.steps||[]).map(function(n,i){return '<div class="lb-tc__step'+(i<=t.currentStep?' is-done':'')+'"><span class="lb-tc__dot"></span>'+esc(n)+'</div>';}).join('');
+    var ev=(t.events||[]).map(function(e){return '<li><div class="lb-tc__et">'+esc(e.status)+'</div>'+(e.description?'<div>'+esc(e.description)+'</div>':'')+'<div class="lb-tc__em">'+esc([e.location,fmt(e.time,true)].filter(Boolean).join(' · '))+'</div></li>';}).join('');
+    card('<div class="lb-tc__em">Tracking ID '+esc(r.code)+' · Delivered by Ekart</div>'+
+      '<h2 class="lb-tc__h lb__display">'+esc(t.status)+'</h2>'+
+      (t.expectedDelivery?'<div class="lb-tc__em">Expected delivery</div><div class="lb-tc__edd">'+esc(fmt(t.expectedDelivery))+'</div>':'')+
+      '<div class="lb-tc__steps">'+steps+'</div>'+
+      '<h3 class="lb-tc__h3">Tracking history</h3><ul class="lb-tc__tl">'+(ev||'<li>No updates yet.</li>')+'</ul>'+
+      (t.mock?'<p class="lb-tc__note">Demo data — Ekart connection not live yet.</p>':''));
+  }
+  var IPRE=/^[A-Z]{2}\d{9}IN$/;
+  async function track(raw){
+    var code=raw.toUpperCase().replace(/[\s-]/g,'');
+    if(IPRE.test(code)) return indiaPost(code); // no API call needed
+    if(!API) return card('<p class="lb-tc__err">Tracking is not available right now. Please contact us on WhatsApp.</p>');
+    card('Looking up your parcel…');
+    try{
+      var res=await fetch(API+(API.indexOf('?')<0?'?':'&')+'code='+encodeURIComponent(code));
+      var r=await res.json();
+      if(!res.ok) return card('<p class="lb-tc__err">'+esc(r.error||'Something went wrong.')+'</p>');
+      if(r.carrier==='indiapost') indiaPost(r.code,r.redirectUrl); else ekart(r);
+    }catch(e){card('<p class="lb-tc__err">Could not reach the tracking service. Please try again.</p>');}
+  }
+  form.addEventListener('submit',function(e){e.preventDefault();var c=input.value.trim();if(c)track(c);});
+  var q=new URLSearchParams(location.search).get('code'); if(q){input.value=q;track(q);}
+})();
+</script>
+
+{%- style -%}
+  .lb-tc { background: var(--lb-cream); padding: 22px 0 44px; }
+  .lb-tc__wrap { max-width: 720px; }
+  .lb-tc__title { font-size: 27px; font-weight: 700; color: var(--lb-green); margin: 0 0 6px; }
+  .lb-tc__sub { font-size: 14px; color: var(--lb-brown); margin: 0 0 16px; }
+  .lb-tc__form { display: flex; gap: 8px; }
+  .lb-tc__input { flex: 1; min-width: 0; padding: 13px 14px; border: 1px solid var(--lb-border-2, var(--lb-border)); border-radius: 5px; font-size: 15px; text-transform: uppercase; background: #fff; }
+  .lb-tc__btn { display: inline-block; border: 0; cursor: pointer; background: var(--lb-green); color: var(--lb-cream-2); border-radius: 40px; padding: 13px 28px; font-weight: 700; font-size: 14.5px; }
+  .lb-tc__btn:hover { background: #000; }
+  .lb-tc__card { background: #fff; border: 1px solid var(--lb-border); border-radius: 5px; padding: 20px 18px; margin-top: 18px; font-size: 14px; color: var(--lb-brown); }
+  .lb-tc__h { font-size: 21px; font-weight: 700; color: var(--lb-green); margin: 4px 0 8px; }
+  .lb-tc__h3 { font-size: 15px; font-weight: 700; color: var(--lb-green); margin: 18px 0 10px; }
+  .lb-tc__em { font-size: 12.5px; color: var(--lb-brown-3); }
+  .lb-tc__edd { font-size: 20px; font-weight: 700; color: var(--lb-green); margin-top: 2px; }
+  .lb-tc__steps { display: flex; gap: 4px; margin: 20px 0 4px; }
+  .lb-tc__step { flex: 1; text-align: center; font-size: 11.5px; color: var(--lb-brown-3); }
+  .lb-tc__step.is-done { color: var(--lb-green); font-weight: 600; }
+  .lb-tc__dot { display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--lb-border); margin: 0 auto 6px; }
+  .lb-tc__step.is-done .lb-tc__dot { background: var(--lb-green); }
+  .lb-tc__tl { list-style: none; margin: 0; padding: 0 0 0 4px; border-left: 2px solid var(--lb-border); }
+  .lb-tc__tl li { position: relative; padding: 0 0 16px 16px; }
+  .lb-tc__tl li::before { content: ""; position: absolute; left: -7px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--lb-border); }
+  .lb-tc__tl li:first-child::before { background: var(--lb-green); }
+  .lb-tc__et { font-weight: 700; color: var(--lb-green); }
+  .lb-tc__note { font-size: 12px; color: var(--lb-brown-3); }
+  .lb-tc__err { color: #be3105; font-weight: 600; }
+  .lb-tc__alt { text-align: center; margin-top: 20px; font-size: 13.5px; }
+  .lb-tc__alt a { color: var(--lb-green); font-weight: 700; }
+  @media (max-width: 560px) { .lb-tc__title { font-size: 22px; } .lb-tc__step { font-size: 10px; } }
+{%- endstyle -%}
+
+{% schema %}
+{
+  "name": "Lunabee Track by Code",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "title", "label": "Heading", "default": "Track your parcel" },
+    { "type": "url", "id": "api_url", "label": "Tracking API URL (Ekart lookup)", "info": "Backend endpoint that returns Ekart details, e.g. https://track.lunabee.in/api/track" },
+    { "type": "url", "id": "india_post_url", "label": "India Post tracking link", "default": "https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx" },
+    { "type": "url", "id": "orders_page_url", "label": "'My orders' tracking page (optional)" }
+  ],
+  "presets": [{ "name": "Lunabee Track by Code" }]
+}
+{% endschema %}
